@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "249127948591",
+    "project_id": "ggi-canteen",
+    "storage_bucket": "ggi-canteen.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:249127948591:android:8e61ddb5fe36ba5aed11da",
+        "android_client_info": {
+          "package_name": "com.example.ggi_canteen"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnWkGckLiy35zci6kh1t2uIas6P7imxNw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
