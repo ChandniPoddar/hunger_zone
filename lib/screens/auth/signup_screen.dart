@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../services/auth_service.dart';
+import 'phone_auth_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -24,6 +26,7 @@ class _SignupScreenState extends State<SignupScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
               controller: _emailController,
@@ -44,24 +47,28 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
             const SizedBox(height: 20),
 
-            if (auth.loading)
-              const CircularProgressIndicator()
-            else
-              ElevatedButton(
-                onPressed: () async {
-                  final msg = await auth.signUp(
-                    email: _emailController.text.trim(),
-                    password: _passwordController.text.trim(),
-                  );
+            auth.loading
+                ? const CircularProgressIndicator()
+                : ElevatedButton(
+              onPressed: () async {
+                final msg = await auth.signUp(
+                  email: _emailController.text.trim(),
+                  password: _passwordController.text.trim(),
+                );
 
-                  if (msg != null) {
-                    setState(() => error = msg);
-                  } else {
-                    Navigator.pop(context); // back to login
-                  }
-                },
-                child: const Text('Sign Up'),
-              ),
+                if (msg != null) {
+                  setState(() => error = msg);
+                } else {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const PhoneAuthScreen(),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Sign Up'),
+            ),
 
             if (error != null) ...[
               const SizedBox(height: 12),

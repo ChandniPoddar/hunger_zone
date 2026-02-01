@@ -1,12 +1,99 @@
-import 'dart:io'; // ✅ REQUIRED for platform check
+import 'dart:io'; // ✅ Platform check
 
 import 'package:flutter/material.dart';
-import 'package:flutter_paypal/flutter_paypal.dart';
 import 'package:ggi_canteen/providers/cart_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  late Razorpay _razorpay;
+
+  // 🔑 Your Razorpay TEST Key ID
+  final String razorpayKey = 'rzp_test_SAodWBg2uq2dkh';
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay();
+
+    _razorpay.on(
+        Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(
+        Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(
+        Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
+  }
+
+  // 🔓 Open Razorpay Checkout (NO SERVER)
+  void _openCheckout(double amount) {
+    var options = {
+      'key': razorpayKey,
+      'amount': (amount * 100).toInt(), // INR → paise
+      'name': 'GGI Canteen',
+      'description': 'Food Order Payment',
+      'prefill': {
+        'contact': '9999999999',
+        'email': 'test@example.com',
+      },
+      'external': {
+        'wallets': ['PAYTM'],
+      },
+    };
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      debugPrint('Razorpay error: $e');
+    }
+  }
+
+  // ✅ Payment Success
+  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    final cart = Provider.of<CartProvider>(context, listen: false);
+    cart.clear();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Payment Successful! Order Placed.'),
+      ),
+    );
+
+    Navigator.pop(context);
+  }
+
+  // ❌ Payment Failed
+  void _handlePaymentError(PaymentFailureResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Payment Failed: ${response.code} - ${response.message}',
+        ),
+      ),
+    );
+  }
+
+  // 💼 External Wallet
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content:
+        Text('External Wallet Selected: ${response.walletName}'),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +102,9 @@ class CartScreen extends StatelessWidget {
       body: Consumer<CartProvider>(
         builder: (context, cart, child) {
           if (cart.itemCount == 0) {
-            return const Center(child: Text('Your cart is empty!'));
+            return const Center(
+              child: Text('Your cart is empty!'),
+            );
           }
 
           return Column(
@@ -24,11 +113,15 @@ class CartScreen extends StatelessWidget {
                 child: ListView.builder(
                   itemCount: cart.items.length,
                   itemBuilder: (context, index) {
-                    final cartItem = cart.items.values.toList()[index];
+                    final cartItem =
+                    cart.items.values.toList()[index];
+
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundImage: cartItem.foodItem.imageUrl.isNotEmpty
-                            ? NetworkImage(cartItem.foodItem.imageUrl)
+                        backgroundImage:
+                        cartItem.foodItem.imageUrl.isNotEmpty
+                            ? NetworkImage(
+                            cartItem.foodItem.imageUrl)
                             : null,
                         child: cartItem.foodItem.imageUrl.isEmpty
                             ? const Icon(Icons.fastfood)
@@ -36,17 +129,19 @@ class CartScreen extends StatelessWidget {
                       ),
                       title: Text(cartItem.foodItem.name),
                       subtitle: Text(
-                        '\$${cartItem.foodItem.price.toStringAsFixed(2)} x ${cartItem.quantity}',
+                        '₹${cartItem.foodItem.price.toStringAsFixed(2)} x ${cartItem.quantity}',
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            '\$${cartItem.totalPrice.toStringAsFixed(2)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            '₹${cartItem.totalPrice.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.remove_circle_outline,
+                            icon: const Icon(
+                                Icons.remove_circle_outline,
                                 color: Colors.red),
                             onPressed: () {
                               cart.removeSingleItem(
@@ -54,7 +149,8 @@ class CartScreen extends StatelessWidget {
                             },
                           ),
                           IconButton(
-                            icon: const Icon(Icons.add_circle_outline,
+                            icon: const Icon(
+                                Icons.add_circle_outline,
                                 color: Colors.green),
                             onPressed: () {
                               cart.addItem(cartItem.foodItem);
@@ -67,7 +163,7 @@ class CartScreen extends StatelessWidget {
                 ),
               ),
 
-              /// -------- BOTTOM CHECKOUT SECTION --------
+              /// -------- CHECKOUT SECTION --------
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: const BoxDecoration(
@@ -93,7 +189,7 @@ class CartScreen extends StatelessWidget {
                               fontWeight: FontWeight.bold),
                         ),
                         Text(
-                          '\$${cart.totalAmount.toStringAsFixed(2)}',
+                          '₹${cart.totalAmount.toStringAsFixed(2)}',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -109,97 +205,15 @@ class CartScreen extends StatelessWidget {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          /// ✅ PLATFORM CHECK (CRITICAL FIX)
                           if (Platform.isAndroid ||
                               Platform.isIOS) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (BuildContext context) =>
-                                    UsePaypal(
-                                      sandboxMode: true,
-                                      clientId:
-                                      "AYaXRGCcUOQDby_OExOYdRBweH91jQ4BcUIwiUPQWS4kjwIfT-LNNv9YHk6uYUsob_0xuSS3xp8UFgw1",
-                                      secretKey:
-                                      "EIkXOXJpiB--roPc32vXl9BqfUuOfyM7_LFOUdSIzkEp4ZvUMGM80y99q2czjPmhhAhReV4Za25f_xdD",
-                                      returnURL:
-                                      "https://samplesite.com/return",
-                                      cancelURL:
-                                      "https://samplesite.com/cancel",
-                                      transactions: [
-                                        {
-                                          "amount": {
-                                            "total": cart.totalAmount
-                                                .toStringAsFixed(2),
-                                            "currency": "USD",
-                                            "details": {
-                                              "subtotal": cart.totalAmount
-                                                  .toStringAsFixed(2),
-                                              "shipping": '0',
-                                              "shipping_discount": 0
-                                            }
-                                          },
-                                          "description":
-                                          "GGI Canteen Order",
-                                          "item_list": {
-                                            "items": cart.items
-                                                .values
-                                                .map((item) => {
-                                              "name": item
-                                                  .foodItem
-                                                  .name,
-                                              "quantity":
-                                              item.quantity,
-                                              "price": item
-                                                  .foodItem
-                                                  .price
-                                                  .toStringAsFixed(
-                                                  2),
-                                              "currency": "USD"
-                                            })
-                                                .toList()
-                                          }
-                                        }
-                                      ],
-                                      note:
-                                      "Contact us for any questions on your order.",
-                                      onSuccess:
-                                          (Map params) async {
-                                        cart.clear();
-                                        ScaffoldMessenger.of(
-                                            context)
-                                            .showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                                'Payment Successful! Order Placed.'),
-                                          ),
-                                        );
-                                        Navigator.pop(context);
-                                      },
-                                      onError: (error) {
-                                        ScaffoldMessenger.of(
-                                            context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                                'Payment Failed: $error'),
-                                          ),
-                                        );
-                                      },
-                                      onCancel: (params) {
-                                        debugPrint(
-                                            'Payment cancelled');
-                                      },
-                                    ),
-                              ),
-                            );
+                            _openCheckout(cart.totalAmount);
                           } else {
-                            /// ❌ WINDOWS / DESKTOP SAFE MESSAGE
                             ScaffoldMessenger.of(context)
                                 .showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                  'PayPal is supported only on Android & iOS',
-                                ),
+                                    'Razorpay works only on Android & iOS'),
                               ),
                             );
                           }
@@ -209,7 +223,7 @@ class CartScreen extends StatelessWidget {
                               vertical: 16),
                         ),
                         child: const Text(
-                          'Checkout with PayPal',
+                          'Checkout with Razorpay',
                           style: TextStyle(fontSize: 16),
                         ),
                       ),

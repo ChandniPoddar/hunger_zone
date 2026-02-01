@@ -4,65 +4,63 @@ import 'package:flutter/material.dart';
 class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  User? get currentUser => _auth.currentUser;
+  bool loading = false;
 
-  bool _loading = false;
-  bool get loading => _loading;
+  User? get user => _auth.currentUser;
 
-  void _setLoading(bool value) {
-    _loading = value;
-    notifyListeners();
-  }
-
-  /// 🔐 SIGN IN
+  // ---------------- LOGIN ----------------
   Future<String?> signIn({
     required String email,
     required String password,
   }) async {
-    if (email.isEmpty || password.isEmpty) {
-      return 'Email and password cannot be empty';
-    }
-
     try {
-      _setLoading(true);
+      loading = true;
+      notifyListeners();
+
       await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      return null; // ✅ success
+      return null;
     } on FirebaseAuthException catch (e) {
-      return e.message ?? 'Login failed';
+      return e.message;
     } finally {
-      _setLoading(false);
+      loading = false;
+      notifyListeners();
     }
   }
 
-  /// 🔐 SIGN UP
+  // ---------------- SIGNUP ----------------
   Future<String?> signUp({
     required String email,
     required String password,
   }) async {
-    if (email.isEmpty || password.isEmpty) {
-      return 'Email and password cannot be empty';
-    }
-
     try {
-      _setLoading(true);
+      loading = true;
+      notifyListeners();
+
       await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-      return null; // ✅ success
+      return null;
     } on FirebaseAuthException catch (e) {
-      return e.message ?? 'Signup failed';
+      return e.message;
     } finally {
-      _setLoading(false);
+      loading = false;
+      notifyListeners();
     }
   }
 
-  /// 🚪 LOGOUT
-  Future<void> signOut() async {
+  // ---------------- PHONE CHECK ----------------
+  bool get isPhoneVerified {
+    final u = _auth.currentUser;
+    if (u == null) return false;
+    return u.providerData.any((p) => p.providerId == 'phone');
+  }
+
+  // ---------------- LOGOUT ----------------
+  Future<void> logout() async {
     await _auth.signOut();
-    notifyListeners();
   }
 }

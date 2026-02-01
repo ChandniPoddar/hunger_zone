@@ -4,10 +4,17 @@ import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../providers/cart_provider.dart';
 import '../../models/food_item.dart';
+
 import '../admin/admin_dashboard.dart';
 import '../auth/login_screen.dart';
 import 'cart_screen.dart';
-import '../../widgets/product_card.dart';
+import '../../widgets/category_card.dart';
+
+import 'product_list_screen.dart';
+import 'canteen_screen.dart';
+import 'lipton_screen.dart';
+import 'fruitcorner_screen.dart';
+import 'nescafe_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,38 +31,76 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _products = FoodItem.getMockItems();
-    // _checkAdminStatus();
   }
 
-  // Future<void> _checkAdminStatus() async {
-  //   final authService = context.read<AuthService>();
-  //   final admin = await authService.isAdmin();
-  //
-  //   if (!mounted) return;
-  //
-  //   setState(() {
-  //     _isAdmin = admin;
-  //   });
-  // }
+  void _openCategory(BuildContext context, String category) {
+    debugPrint('Opening category: $category');
+
+    // 🔹 Dedicated category screens
+    if (category == 'Lipton') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const LiptonScreen()),
+      );
+      return;
+    }
+
+    if (category == 'Nescafe') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const NescafeScreen()),
+      );
+      return;
+    }
+
+    if (category == 'Fruit Corner') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const FruitCornerScreen()),
+      );
+      return;
+    }
+
+    if (category == 'Canteen') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CanteenScreen()),
+      );
+      return;
+    }
+
+    // 🔹 Fallback (generic product list)
+    final filteredProducts = _products
+        .where((item) => item.category.trim() == category)
+        .toList();
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProductListScreen(
+          category: category,
+          products: filteredProducts,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: Consumer<CartProvider>(
-        builder: (context, cart, child) {
+        builder: (context, cart, _) {
           if (cart.itemCount == 0) return const SizedBox.shrink();
 
           return FloatingActionButton.extended(
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => const CartScreen(),
-                ),
+                MaterialPageRoute(builder: (_) => const CartScreen()),
               );
             },
-            label: Text('${cart.itemCount} Items'),
             icon: const Icon(Icons.shopping_cart),
+            label: Text('${cart.itemCount} Items'),
           );
         },
       ),
@@ -96,8 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
               IconButton(
                 icon: const Icon(Icons.logout),
                 onPressed: () async {
-                  await context.read<AuthService>().signOut();
-
+                  await context.read<AuthService>().logout();
                   if (!mounted) return;
 
                   Navigator.pushAndRemoveUntil(
@@ -111,6 +155,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
+
+          /// HEADER
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -124,12 +170,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         .headlineMedium
                         ?.copyWith(fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 4),
                   Text(
                     'Order your favorite food now!',
                     style: Theme.of(context)
                         .textTheme
                         .bodyLarge
-                        ?.copyWith(color: Colors.grey[600]),
+                        ?.copyWith(color: Colors.grey),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -143,23 +190,44 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+
+          /// CATEGORY GRID
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                childAspectRatio: 0.75,
                 mainAxisSpacing: 16,
                 crossAxisSpacing: 16,
+                childAspectRatio: 1,
               ),
-              delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                  return ProductCard(foodItem: _products[index]);
-                },
-                childCount: _products.length,
+              delegate: SliverChildListDelegate(
+                [
+                  CategoryCard(
+                    title: 'Nescafe',
+                    icon: Icons.coffee,
+                    onTap: () => _openCategory(context, 'Nescafe'),
+                  ),
+                  CategoryCard(
+                    title: 'Lipton',
+                    icon: Icons.local_cafe,
+                    onTap: () => _openCategory(context, 'Lipton'),
+                  ),
+                  CategoryCard(
+                    title: 'Canteen',
+                    icon: Icons.restaurant,
+                    onTap: () => _openCategory(context, 'Canteen'),
+                  ),
+                  CategoryCard(
+                    title: 'Fruit Corner',
+                    icon: Icons.apple,
+                    onTap: () => _openCategory(context, 'Fruit Corner'),
+                  ),
+                ],
               ),
             ),
           ),
+
           const SliverPadding(
             padding: EdgeInsets.only(bottom: 80),
           ),

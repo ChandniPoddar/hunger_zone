@@ -1,20 +1,74 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../services/auth_service.dart';
-import '../consumer/home_screen.dart';
-import 'login_screen.dart';
 
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
+class AuthService extends ChangeNotifier {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthService>();
+  bool loading = false;
 
-    if (auth.currentUser != null) {
-      return HomeScreen();
-    } else {
-      return const LoginScreen();
+  // ---------------- CURRENT USER ----------------
+  User? get user => _auth.currentUser;
+
+  // ---------------- LOGIN ----------------
+  Future<String?> signIn({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      loading = true;
+      notifyListeners();
+
+      await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return null;
+    } on FirebaseAuthException catch (e) {
+      return e.message;
+    } catch (e) {
+      return e.toString();
+    } finally {
+      loading = false;
+      notifyListeners();
     }
+  }
+
+  // ---------------- SIGNUP ----------------
+  Future<String?> signUp({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      loading = true;
+      notifyListeners();
+
+      await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return null;
+    } on FirebaseAuthException catch (e) {
+      return e.message;
+    } catch (e) {
+      return e.toString();
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
+  }
+
+  // ---------------- PHONE VERIFIED ----------------
+  bool get isPhoneVerified {
+    final u = _auth.currentUser;
+    if (u == null) return false;
+    return u.providerData.any(
+          (provider) => provider.providerId == 'phone',
+    );
+  }
+
+  // ---------------- SIGN OUT ----------------
+  Future<void> signOut() async {
+    await _auth.signOut();
+    notifyListeners();
   }
 }
