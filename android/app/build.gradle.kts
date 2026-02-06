@@ -1,20 +1,24 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("com.google.gms.google-services") // <-- NO VERSION
+    id("kotlin-android")
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.example.ggi_canteen"
-    compileSdk = flutter.compileSdkVersion
+    // Updated compileSdk to 36 to resolve plugin dependency requirements
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.ggi_canteen"
+        // Set minSdk explicitly to 23 as required by modern Firebase/Razorpay features
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        multiDexEnabled = true
     }
 
     compileOptions {
@@ -28,6 +32,8 @@ android {
 
     buildTypes {
         release {
+            isMinifyEnabled = false
+            isShrinkResources = false
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -35,4 +41,8 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation("androidx.multidex:multidex:2.0.1")
 }

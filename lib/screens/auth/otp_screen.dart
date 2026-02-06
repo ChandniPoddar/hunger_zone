@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -6,7 +7,10 @@ import '../consumer/home_screen.dart';
 class OTPScreen extends StatefulWidget {
   final String verificationId;
 
-  const OTPScreen({super.key, required this.verificationId});
+  const OTPScreen({
+    super.key,
+    required this.verificationId,
+  });
 
   @override
   State<OTPScreen> createState() => _OTPScreenState();
@@ -19,8 +23,23 @@ class _OTPScreenState extends State<OTPScreen> {
   bool isLoading = false;
 
   Future<void> _submitOTP() async {
+    // 🔥 DEBUG MODE: SKIP OTP & GO HOME DIRECTLY
+    if (kDebugMode) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+      return;
+    }
+
     final code = otpController.text.trim();
-    if (code.isEmpty) return;
+
+    if (code.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter valid 6 digit OTP")),
+      );
+      return;
+    }
 
     setState(() => isLoading = true);
 
@@ -30,19 +49,16 @@ class _OTPScreenState extends State<OTPScreen> {
         smsCode: code,
       );
 
-      final user = _auth.currentUser;
-      if (user != null) {
-        await user.linkWithCredential(credential);
-      }
+      await _auth.signInWithCredential(credential);
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => HomeScreen()),
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } catch (e) {
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        const SnackBar(content: Text("Invalid OTP")),
       );
     }
   }
@@ -50,7 +66,10 @@ class _OTPScreenState extends State<OTPScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Enter OTP')),
+      appBar: AppBar(
+        title: const Text("Enter OTP"),
+        centerTitle: true,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -59,18 +78,22 @@ class _OTPScreenState extends State<OTPScreen> {
             TextField(
               controller: otpController,
               keyboardType: TextInputType.number,
+              maxLength: 6,
               decoration: const InputDecoration(
-                hintText: '6 digit OTP',
+                hintText: "6 digit OTP",
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 20),
-
-            ElevatedButton(
-              onPressed: isLoading ? null : _submitOTP,
-              child: isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Verify'),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : _submitOTP,
+                child: isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text("Verify"),
+              ),
             ),
           ],
         ),

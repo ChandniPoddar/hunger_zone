@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'auth/login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -8,98 +10,163 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+
   @override
   void initState() {
     super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    );
+
+    _controller.forward();
     _navigateNext();
   }
 
   Future<void> _navigateNext() async {
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 4));
     if (!mounted) return;
 
-    // ✅ ALWAYS go to Login first
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const LoginScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 800),
+      ),
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF2C7DA0),
-              Color(0xFF4AC29A),
-            ],
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Background Image
+          Positioned.fill(
+            child: CachedNetworkImage(
+              imageUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop",
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(color: Colors.black),
+              errorWidget: (context, url, error) => Container(color: Colors.black),
+            ),
           ),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(),
-              Container(
-                width: 150,
-                height: 150,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
+
+          // Dark Overlay with subtle Golden gradient
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withOpacity(0.95),
+                    Colors.black.withOpacity(0.6),
+                    const Color(0xFF0F0F0F).withOpacity(0.9),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
+              ),
+            ),
+          ),
+
+          // Main Content
+          Center(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: ScaleTransition(
+                scale: _scaleAnimation,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.restaurant, size: 40, color: Color(0xFF6D4C41)),
-                    SizedBox(height: 8),
+                  children: [
+                    // Premium Logo Container
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFFFFD700), width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFFD700).withOpacity(0.3),
+                            blurRadius: 20,
+                            spreadRadius: 5,
+                          )
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.restaurant_menu_rounded,
+                        size: 80,
+                        color: Color(0xFFFFD700),
+                      ),
+                    ),
+                    const SizedBox(height: 30),
                     Text(
-                      'GGI\nCANTEEN',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
+                      "GGI CANTEEN",
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFFFFD700),
+                        fontSize: 42,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF6D4C41),
-                        fontSize: 16,
+                        letterSpacing: 4,
+                        shadows: [
+                          const Shadow(
+                            color: Colors.black,
+                            offset: Offset(2, 2),
+                            blurRadius: 10,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "Your Campus, Your Flavour",
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontStyle: FontStyle.italic,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 100),
+                    const CircularProgressIndicator(
+                      color: Color(0xFFFFD700),
+                      strokeWidth: 2,
+                    ),
+                    const SizedBox(height: 40),
+                    Text(
+                      "Designed by Chandni",
+                      style: GoogleFonts.poppins(
+                        color: Colors.white54,
+                        fontSize: 14,
+                        letterSpacing: 1.2,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              const Text(
-                'Your Campus, Your Flavour',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontStyle: FontStyle.italic,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const Spacer(),
-              const Text(
-                'Waves of Food',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Designed by Chandni',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                ),
-              ),
-              const SizedBox(height: 40),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
