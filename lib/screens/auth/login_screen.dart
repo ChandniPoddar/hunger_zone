@@ -79,16 +79,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   }
 
                   if (!mounted) return;
-
-                  // ---------------- Phone verification skipped for now ----------------
-                  // if (!auth.isPhoneVerified) {
-                  //   Navigator.pushReplacement(
-                  //     context,
-                  //     MaterialPageRoute(
-                  //       builder: (_) => const PhoneAuthScreen(),
-                  //     ),
-                  //   );
-                  // } else {
+//---------------- Phone verification skipped for now ----------------
+                  if (!auth.isPhoneVerified) {
+                   Navigator.pushReplacement(
+                       context,
+                       MaterialPageRoute(
+                       builder: (_) => const PhoneAuthScreen(),
+                       ),
+                     );
+                  } else {
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
