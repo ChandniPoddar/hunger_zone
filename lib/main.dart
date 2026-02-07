@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'GGI Canteen',
+        title: 'Global Eats',
         theme: ThemeData(
           brightness: Brightness.dark,
           primaryColor: const Color(0xFFFFD700),

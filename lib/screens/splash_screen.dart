@@ -122,8 +122,8 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 30),
                     Text(
-                      "GGI CANTEEN",
-                      style: GoogleFonts.poppins(
+                      "GLOBAL EATS",
+                      style: GoogleFonts.monoton(
                         color: const Color(0xFFFFD700),
                         fontSize: 42,
                         fontWeight: FontWeight.bold,
@@ -139,10 +139,10 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      "Your Campus, Your Flavour",
+                      "Taste the World, One Plate at a Time",
                       style: GoogleFonts.poppins(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 16,
                         fontStyle: FontStyle.italic,
                         letterSpacing: 1.5,
                       ),

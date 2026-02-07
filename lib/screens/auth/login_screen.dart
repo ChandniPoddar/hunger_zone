@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../services/auth_service.dart';
 import '../consumer/home_screen.dart';
 import 'signup_screen.dart';
+import 'phone_auth_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -256,6 +257,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                                                 if (!mounted) return;
 
+                                                // Navigate directly to HomeScreen
                                                 Navigator.pushReplacement(
                                                   context,
                                                   MaterialPageRoute(
@@ -323,7 +325,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-<<<<<<< HEAD
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -348,53 +349,6 @@ class _LoginScreenState extends State<LoginScreen>
           hintStyle: GoogleFonts.poppins(color: Colors.white38),
           prefixIcon: Icon(icon, color: const Color(0xFFFFD700)),
           suffixIcon: suffix,
-=======
-                  if (msg != null) {
-                    // Show Firebase error as toast
-                    Fluttertoast.showToast(
-                      msg: msg,
-                      toastLength: Toast.LENGTH_LONG,
-                      gravity: ToastGravity.BOTTOM,
-                      backgroundColor: Colors.black87,
-                      textColor: Colors.white,
-                      fontSize: 16.0,
-                    );
-                    return;
-                  }
-
-                  if (!mounted) return;
-//---------------- Phone verification skipped for now ----------------
-                  if (!auth.isPhoneVerified) {
-                   Navigator.pushReplacement(
-                       context,
-                       MaterialPageRoute(
-                       builder: (_) => const PhoneAuthScreen(),
-                       ),
-                     );
-                  } else {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const HomeScreen(),
-                    ),
-                  );
-                  // }
-                },
-                child: const Text('Login'),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SignupScreen()),
-                );
-              },
-              child: const Text('Create new account'),
-            ),
-          ],
->>>>>>> 6c58c7e962fa8fe8a347a9424309a360726f0db0
         ),
       ),
     );
