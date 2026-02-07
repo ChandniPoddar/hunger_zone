@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../services/auth_service.dart';
 import '../consumer/home_screen.dart';
 import 'signup_screen.dart';
+import 'phone_auth_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -256,6 +257,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                                                 if (!mounted) return;
 
+                                                // Navigate directly to HomeScreen
                                                 Navigator.pushReplacement(
                                                   context,
                                                   MaterialPageRoute(

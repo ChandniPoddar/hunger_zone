@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:ggi_canteen/models/food_item.dart';
 import 'package:ggi_canteen/widgets/product_card.dart';
 
@@ -52,7 +51,7 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
           slivers: [
             SliverAppBar(
               pinned: true,
-              expandedHeight: 200,
+              expandedHeight: 250,
               backgroundColor: Colors.black,
               iconTheme: const IconThemeData(color: Color(0xFFFFD700)),
               flexibleSpace: FlexibleSpaceBar(
@@ -66,14 +65,22 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
                 background: Stack(
                   fit: StackFit.expand,
                   children: [
-                    CachedNetworkImage(
-                      imageUrl: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=2070&auto=format&fit=crop",
+                    Image.asset(
+                      'assets/images/fruit_corner.jpeg',
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        color: Colors.grey[900],
+                        child: const Icon(Icons.apple, color: Color(0xFFFFD700), size: 50),
+                      ),
                     ),
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.black, Colors.transparent, Colors.black.withOpacity(0.8)],
+                          colors: [
+                            Colors.black.withOpacity(0.7),
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.9)
+                          ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                         ),

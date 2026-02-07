@@ -48,8 +48,8 @@ class FoodItem {
         id: '4',
         name: 'Iced Coffee',
         description: 'Cold brewed coffee with milk/cream',
+        imageUrl: 'https://images.unsplash.com/photo-1517701604599-bb29b5dd735a?w=500&q=80',
         price: 3.50,
-        imageUrl: 'https://images.unsplash.com/photo-1517701604599-bb29b5dd7359?w=500&q=80',
         category: 'Beverage',
       ),
     ];
