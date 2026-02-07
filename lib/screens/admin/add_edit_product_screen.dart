@@ -1,10 +1,9 @@
 import 'dart:io';
-
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:ggi_canteen/models/food_item.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../models/food_item.dart';
 
 class AddEditProductScreen extends StatefulWidget {
   final FoodItem? foodItem;
@@ -25,6 +24,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   File? _imageFile;
   String _imageUrl = '';
   bool _isLoading = false;
+  bool _isAvailable = true;
+
+  final List<String> _categories = ['Nescafe', 'Lipton', 'Canteen', 'Fruit Corner', 'Fast Food', 'Pizza', 'Rolls', 'Beverage'];
 
   @override
   void initState() {
@@ -35,6 +37,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _priceController.text = widget.foodItem!.price.toString();
       _categoryController.text = widget.foodItem!.category;
       _imageUrl = widget.foodItem!.imageUrl;
+      _isAvailable = widget.foodItem!.isAvailable;
+    } else {
+      _categoryController.text = _categories[0];
     }
   }
 
@@ -49,7 +54,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
 
     if (pickedFile != null) {
       setState(() {
@@ -63,11 +68,37 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
     setState(() => _isLoading = true);
     try {
-      // Mock save
-      await Future.delayed(const Duration(seconds: 1));
+      // NOTE: For a real app, you would upload _imageFile to Firebase Storage here
+      // and get a download URL. For now, we use the existing URL or a placeholder.
+      String finalImageUrl = _imageUrl;
+      if (_imageFile != null) {
+        // Placeholder until Storage is integrated
+        finalImageUrl = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=500&auto=format&fit=crop"; 
+      }
+
+      final productData = {
+        'name': _nameController.text.trim(),
+        'description': _descController.text.trim(),
+        'price': double.parse(_priceController.text.trim()),
+        'category': _categoryController.text.trim(),
+        'imageUrl': finalImageUrl,
+        'isAvailable': _isAvailable,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (widget.foodItem == null) {
+        await FirebaseFirestore.instance.collection('products').add(productData);
+      } else {
+        await FirebaseFirestore.instance
+            .collection('products')
+            .doc(widget.foodItem!.id)
+            .update(productData);
+      }
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Product saved (Mock)')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(widget.foodItem == null ? 'Product Added' : 'Product Updated'))
+        );
         Navigator.pop(context);
       }
     } catch (e) {
@@ -84,64 +115,166 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.foodItem == null ? 'Add Product' : 'Edit Product')),
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: Text(
+          widget.foodItem == null ? 'Add New Item' : 'Edit Item',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.black,
+        elevation: 0,
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Image Picker UI
               GestureDetector(
                 onTap: _pickImage,
                 child: Container(
                   height: 200,
                   width: double.infinity,
-                  color: Colors.grey[200],
-                  child: _imageFile != null
-                      ? Image.file(_imageFile!, fit: BoxFit.cover)
-                      : (_imageUrl.isNotEmpty
-                          ? Image.network(_imageUrl, fit: BoxFit.cover)
-                          : const Icon(Icons.add_a_photo, size: 50, color: Colors.grey)),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.3)),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: _imageFile != null
+                        ? Image.file(_imageFile!, fit: BoxFit.cover)
+                        : (_imageUrl.isNotEmpty
+                            ? Image.network(_imageUrl, fit: BoxFit.cover)
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.add_a_photo, size: 50, color: Color(0xFFFFD700)),
+                                  const SizedBox(height: 8),
+                                  Text("Add Product Photo", style: GoogleFonts.poppins(color: Colors.white54)),
+                                ],
+                              )),
+                  ),
                 ),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Product Name', border: OutlineInputBorder()),
-                validator: (val) => val!.isEmpty ? 'Enter name' : null,
+              const SizedBox(height: 30),
+
+              _buildLabel("Item Name"),
+              _buildTextField(_nameController, "e.g. Special Coffee", Icons.restaurant),
+              
+              const SizedBox(height: 20),
+
+              _buildLabel("Category"),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1E1E),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _categories.contains(_categoryController.text) ? _categoryController.text : _categories[0],
+                    dropdownColor: const Color(0xFF1E1E1E),
+                    isExpanded: true,
+                    style: GoogleFonts.poppins(color: Colors.white),
+                    items: _categories.map((String category) {
+                      return DropdownMenuItem(value: category, child: Text(category));
+                    }).toList(),
+                    onChanged: (val) => setState(() => _categoryController.text = val!),
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descController,
-                decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
-                maxLines: 3,
-                validator: (val) => val!.isEmpty ? 'Enter description' : null,
+
+              const SizedBox(height: 20),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildLabel("Price (₹)"),
+                        _buildTextField(_priceController, "0.00", Icons.currency_rupee, keyboardType: TextInputType.number),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel("Status"),
+                      Switch(
+                        value: _isAvailable,
+                        activeColor: const Color(0xFFFFD700),
+                        onChanged: (val) => setState(() => _isAvailable = val),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _priceController,
-                decoration: const InputDecoration(labelText: 'Price', border: OutlineInputBorder()),
-                keyboardType: TextInputType.number,
-                validator: (val) => val!.isEmpty ? 'Enter price' : null,
-              ),
-              const SizedBox(height: 16),
-               TextFormField(
-                controller: _categoryController,
-                decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
-                validator: (val) => val!.isEmpty ? 'Enter category' : null,
-              ),
-              const SizedBox(height: 24),
+
+              const SizedBox(height: 20),
+
+              _buildLabel("Description"),
+              _buildTextField(_descController, "What's in this dish?", Icons.description, maxLines: 3),
+
+              const SizedBox(height: 40),
+
               SizedBox(
                 width: double.infinity,
+                height: 55,
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFD700),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  ),
                   onPressed: _isLoading ? null : _saveProduct,
-                  child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Save Product'),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.black)
+                      : Text(
+                          widget.foodItem == null ? 'ADD PRODUCT' : 'UPDATE PRODUCT',
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black),
+                        ),
                 ),
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, left: 4),
+      child: Text(
+        label,
+        style: GoogleFonts.poppins(color: const Color(0xFFFFD700), fontWeight: FontWeight.w600, fontSize: 14),
+      ),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String hint, IconData icon, {TextInputType keyboardType = TextInputType.text, int maxLines = 1}) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      style: GoogleFonts.poppins(color: Colors.white),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.poppins(color: Colors.white24),
+        prefixIcon: Icon(icon, color: Colors.white38),
+        filled: true,
+        fillColor: const Color(0xFF1E1E1E),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Colors.white12)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFFFFD700))),
+      ),
+      validator: (val) => val!.isEmpty ? 'This field is required' : null,
     );
   }
 }

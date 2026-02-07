@@ -17,6 +17,29 @@ class FoodItem {
     this.isAvailable = true,
   });
 
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'description': description,
+      'price': price,
+      'imageUrl': imageUrl,
+      'category': category,
+      'isAvailable': isAvailable,
+    };
+  }
+
+  factory FoodItem.fromMap(String id, Map<String, dynamic> map) {
+    return FoodItem(
+      id: id,
+      name: map['name'] ?? '',
+      description: map['description'] ?? '',
+      price: (map['price'] ?? 0.0).toDouble(),
+      imageUrl: map['imageUrl'] ?? '',
+      category: map['category'] ?? '',
+      isAvailable: map['isAvailable'] ?? true,
+    );
+  }
+
   // Mock data factory
   static List<FoodItem> getMockItems() {
     return [
@@ -53,16 +76,5 @@ class FoodItem {
         category: 'Beverage',
       ),
     ];
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'description': description,
-      'price': price,
-      'imageUrl': imageUrl,
-      'category': category,
-      'isAvailable': isAvailable,
-    };
   }
 }
