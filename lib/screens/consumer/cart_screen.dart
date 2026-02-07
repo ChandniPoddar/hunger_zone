@@ -48,7 +48,7 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
     var options = {
       'key': razorpayKey,
       'amount': (amount * 100).toInt(), // Amount in paise
-      'name': 'GGI Canteen',
+      'name': 'Global Eats',
       'description': 'Food Order Payment',
       'prefill': {'contact': '9876543210', 'email': 'test.user@example.com'},
       'external': {
@@ -65,7 +65,7 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
     Fluttertoast.showToast(
-        msg: "Payment Successful!",
+        msg: "Payment Successful! Order Placed.",
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
         backgroundColor: Colors.green,
@@ -108,8 +108,8 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
                   iconTheme: const IconThemeData(color: Color(0xFFFFD700)),
                   flexibleSpace: FlexibleSpaceBar(
                     title: Text(
-                      'Your Cart',
-                      style: GoogleFonts.poppins(color: const Color(0xFFFFD700), fontWeight: FontWeight.bold),
+                      'Your Global Cart',
+                      style: GoogleFonts.poppins(color: const Color(0xFFFFD700), fontWeight: FontWeight.bold, fontSize: 18),
                     ),
                     background: Stack(
                       fit: StackFit.expand,
@@ -121,7 +121,7 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
                         Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Colors.black, Colors.transparent, Colors.black.withOpacity(0.8)],
+                              colors: [Colors.black.withOpacity(0.8), Colors.transparent, Colors.black.withOpacity(0.9)],
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                             ),
@@ -156,54 +156,69 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
                           final cartItem = cart.items.values.toList()[index];
                           return Container(
                             margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: const Color(0xFF1E1E1E),
                               borderRadius: BorderRadius.circular(15),
                               border: Border.all(color: Colors.white.withOpacity(0.05)),
                             ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.all(12),
-                              leading: ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: CachedNetworkImage(
-                                  imageUrl: cartItem.foodItem.imageUrl,
-                                  width: 60,
-                                  height: 60,
-                                  fit: BoxFit.cover,
-                                  errorWidget: (context, url, error) => const Icon(Icons.fastfood, color: Color(0xFFFFD700)),
-                                ),
-                              ),
-                              title: Text(
-                                cartItem.foodItem.name,
-                                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Text(
-                                '₹${cartItem.foodItem.price} x ${cartItem.quantity}',
-                                style: GoogleFonts.poppins(color: Colors.white70),
-                              ),
-                              trailing: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    '₹${cartItem.totalPrice}',
-                                    style: GoogleFonts.poppins(color: const Color(0xFFFFD700), fontWeight: FontWeight.bold),
+                            child: Row(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: CachedNetworkImage(
+                                    imageUrl: cartItem.foodItem.imageUrl,
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                    errorWidget: (context, url, error) => const Icon(Icons.fastfood, color: Color(0xFFFFD700)),
                                   ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
-                                        onPressed: () => cart.removeSingleItem(cartItem.foodItem.id),
+                                      Text(
+                                        cartItem.foodItem.name,
+                                        style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.add_circle_outline, color: Colors.green, size: 20),
-                                        onPressed: () => cart.addItem(cartItem.foodItem),
+                                      Text(
+                                        '₹${cartItem.foodItem.price} x ${cartItem.quantity}',
+                                        style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12),
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '₹${cartItem.totalPrice.toStringAsFixed(2)}',
+                                      style: GoogleFonts.poppins(color: const Color(0xFFFFD700), fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 22),
+                                          onPressed: () => cart.removeSingleItem(cartItem.foodItem.id),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        IconButton(
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                          icon: const Icon(Icons.add_circle_outline, color: Colors.green, size: 22),
+                                          onPressed: () => cart.addItem(cartItem.foodItem),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           );
                         },
@@ -228,7 +243,7 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
                             children: [
                               Text('Total Amount', style: GoogleFonts.poppins(color: Colors.white70, fontSize: 16)),
                               Text(
-                                '₹${cart.totalAmount}',
+                                '₹${cart.totalAmount.toStringAsFixed(2)}',
                                 style: GoogleFonts.poppins(color: const Color(0xFFFFD700), fontSize: 24, fontWeight: FontWeight.bold),
                               ),
                             ],
@@ -252,7 +267,7 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
                                 elevation: 8,
                               ),
                               child: Text(
-                                'Pay with Razorpay',
+                                'Checkout with Razorpay',
                                 style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
                               ),
                             ),
@@ -261,7 +276,7 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
                       ),
                     ),
                   ),
-                const SliverPadding(padding: EdgeInsets.only(bottom: 40)),
+                const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
               ],
             ),
           );

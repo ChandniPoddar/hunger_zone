@@ -33,7 +33,7 @@ class ProductCard extends StatelessWidget {
         children: [
           // Image Section
           Expanded(
-            flex: 3,
+            flex: 4, // Increased flex to give more space to image
             child: ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               child: Stack(
@@ -89,37 +89,33 @@ class ProductCard extends StatelessWidget {
 
           // Info Section
           Expanded(
-            flex: 2,
+            flex: 3, // Increased flex to prevent overflow of text and button
             child: Padding(
-              padding: const EdgeInsets.all(12.0),
+              padding: const EdgeInsets.all(10.0), // Slightly reduced padding
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        foodItem.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
+                  Text(
+                    foodItem.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13, // Slightly reduced font size
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Expanded( // Wrapped in Expanded to prevent text overflow
+                    child: Text(
+                      foodItem.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        color: Colors.white60,
+                        fontSize: 9, // Slightly reduced font size
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        foodItem.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.poppins(
-                          color: Colors.white60,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
 
                   // Add to Cart Button
@@ -141,18 +137,18 @@ class ProductCard extends StatelessWidget {
                         );
                       },
                       child: Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(6), // Slightly reduced padding
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFD700),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                           boxShadow: [
                             BoxShadow(
                               color: const Color(0xFFFFD700).withOpacity(0.3),
-                              blurRadius: 8,
+                              blurRadius: 6,
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.add_shopping_cart, color: Colors.black, size: 18),
+                        child: const Icon(Icons.add_shopping_cart, color: Colors.black, size: 16),
                       ),
                     ),
                   ),

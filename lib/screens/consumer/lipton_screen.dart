@@ -69,7 +69,7 @@ class _LiptonScreenState extends State<LiptonScreen> with SingleTickerProviderSt
                   fit: StackFit.expand,
                   children: [
                     CachedNetworkImage(
-                      imageUrl: "/images/hero",
+                      imageUrl: "https://images.unsplash.com/photo-1515696455671-046a7c98094b?q=80&w=2070&auto=format&fit=crop",
                       fit: BoxFit.cover,
                     ),
                     Container(

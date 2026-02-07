@@ -67,9 +67,11 @@ class _SignupScreenState extends State<SignupScreen>
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: Colors.black,
+      resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
           // Background Image with Dishes
@@ -100,66 +102,75 @@ class _SignupScreenState extends State<SignupScreen>
           ),
 
           // Main Content
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 80),
+          SafeArea(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 60),
 
-              /// Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Create Account ✨",
-                      style: GoogleFonts.poppins(
-                        color: const Color(0xFFFFD700),
-                        fontSize: 34,
-                        fontWeight: FontWeight.bold,
-                        shadows: [
-                          const Shadow(
-                            color: Colors.black,
-                            offset: Offset(2, 2),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Join the GGI Canteen community",
-                      style: GoogleFonts.poppins(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 30),
-
-              /// Animated Card
-              Expanded(
-                child: FadeTransition(
-                  opacity: _fade,
-                  child: SlideTransition(
-                    position: _slide,
-                    child: ScaleTransition(
-                      scale: _scale,
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF1E1E1E),
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(40),
-                            topRight: Radius.circular(40),
+                  /// Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Create Account ✨",
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFFFFD700),
+                            fontSize: 34,
+                            fontWeight: FontWeight.bold,
+                            shadows: [
+                              const Shadow(
+                                color: Colors.black,
+                                offset: Offset(2, 2),
+                                blurRadius: 4,
+                              ),
+                            ],
                           ),
                         ),
-                        child: SingleChildScrollView(
+                        const SizedBox(height: 8),
+                        Text(
+                          "Join the Global Eats community",
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  /// Animated Card
+                  FadeTransition(
+                    opacity: _fade,
+                    child: SlideTransition(
+                      position: _slide,
+                      child: ScaleTransition(
+                        scale: _scale,
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF1E1E1E),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(40),
+                              topRight: Radius.circular(40),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black54,
+                                blurRadius: 20,
+                                offset: Offset(0, -5),
+                              )
+                            ],
+                          ),
                           child: Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               const SizedBox(height: 30),
 
@@ -281,15 +292,16 @@ class _SignupScreenState extends State<SignupScreen>
                                   ),
                                 ],
                               ),
+                              const SizedBox(height: 20),
                             ],
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ],
       ),
