@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import 'package:ggi_canteen/models/food_item.dart';
 import '../../widgets/product_card.dart';
+import '../../providers/cart_provider.dart';
+import 'cart_screen.dart';
 
 class CanteenScreen extends StatefulWidget {
   const CanteenScreen({super.key});
@@ -51,6 +54,21 @@ class _CanteenScreenState extends State<CanteenScreen> with SingleTickerProvider
 
     return Scaffold(
       backgroundColor: Colors.black,
+      floatingActionButton: Consumer<CartProvider>(
+        builder: (context, cart, _) {
+          final canteenCount = cart.items.values.where((item) => item.foodItem.category == 'Canteen').length;
+          if (canteenCount == 0) return const SizedBox.shrink();
+          return FloatingActionButton.extended(
+            backgroundColor: const Color(0xFFFFD700),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen(outletName: 'Canteen'))),
+            icon: const Icon(Icons.shopping_basket_rounded, color: Colors.black),
+            label: Text(
+              'Canteen Cart ($canteenCount)',
+              style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+          );
+        },
+      ),
       body: FadeTransition(
         opacity: _fade,
         child: CustomScrollView(
@@ -63,7 +81,7 @@ class _CanteenScreenState extends State<CanteenScreen> with SingleTickerProvider
               iconTheme: const IconThemeData(color: Color(0xFFFFD700)),
               flexibleSpace: FlexibleSpaceBar(
                 title: Text(
-                  'GGI Main Canteen',
+                  'Main Canteen',
                   style: GoogleFonts.poppins(
                     color: const Color(0xFFFFD700),
                     fontWeight: FontWeight.bold,
@@ -79,7 +97,7 @@ class _CanteenScreenState extends State<CanteenScreen> with SingleTickerProvider
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.black, Colors.transparent, Colors.black.withOpacity(0.8)],
+                          colors: [Colors.black.withOpacity(0.8), Colors.transparent, Colors.black.withOpacity(0.9)],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                         ),

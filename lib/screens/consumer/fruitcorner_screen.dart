@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:ggi_canteen/models/food_item.dart';
-import 'package:ggi_canteen/widgets/product_card.dart';
+import '../../widgets/product_card.dart';
+import '../../providers/cart_provider.dart';
+import 'cart_screen.dart';
 
 class FruitCornerScreen extends StatefulWidget {
   const FruitCornerScreen({super.key});
@@ -44,6 +47,21 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
 
     return Scaffold(
       backgroundColor: Colors.black,
+      floatingActionButton: Consumer<CartProvider>(
+        builder: (context, cart, _) {
+          final fruitCount = cart.items.values.where((item) => item.foodItem.category == 'Fruit Corner').length;
+          if (fruitCount == 0) return const SizedBox.shrink();
+          return FloatingActionButton.extended(
+            backgroundColor: const Color(0xFFFFD700),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen(outletName: 'Fruit Corner'))),
+            icon: const Icon(Icons.shopping_basket_rounded, color: Colors.black),
+            label: Text(
+              'Fruit Cart ($fruitCount)',
+              style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+          );
+        },
+      ),
       body: FadeTransition(
         opacity: _fade,
         child: CustomScrollView(

@@ -10,12 +10,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  fluttertoast: ^8.2.14
+  fluttertoast: ^8.2.10
   cupertino_icons: ^1.0.8
   provider: ^6.1.2
   google_fonts: ^8.0.0
   flutter_paypal: ^0.2.1
-  razorpay_flutter: ^1.2.7
+  # Updated to a version that supports the modern Flutter Android embedding
+  razorpay_flutter: ^1.3.5
   cached_network_image: ^3.4.1
   image_picker: ^1.1.2
   firebase_core: ^4.4.0

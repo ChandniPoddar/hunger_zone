@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import '../../models/food_item.dart';
 import '../../widgets/product_card.dart';
+import '../../providers/cart_provider.dart';
+import 'cart_screen.dart';
 
 class LiptonScreen extends StatefulWidget {
   const LiptonScreen({super.key});
@@ -47,6 +50,21 @@ class _LiptonScreenState extends State<LiptonScreen> with SingleTickerProviderSt
 
     return Scaffold(
       backgroundColor: Colors.black,
+      floatingActionButton: Consumer<CartProvider>(
+        builder: (context, cart, _) {
+          final liptonCount = cart.items.values.where((item) => item.foodItem.category == 'Lipton').length;
+          if (liptonCount == 0) return const SizedBox.shrink();
+          return FloatingActionButton.extended(
+            backgroundColor: const Color(0xFFFFD700),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen(outletName: 'Lipton'))),
+            icon: const Icon(Icons.emoji_food_beverage_rounded, color: Colors.black),
+            label: Text(
+              'Lipton Cart ($liptonCount)',
+              style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.bold),
+            ),
+          );
+        },
+      ),
       body: FadeTransition(
         opacity: _fade,
         child: CustomScrollView(

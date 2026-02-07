@@ -1,6 +1,4 @@
 // android/build.gradle.kts
-// DO NOT add repositories here (they are defined in settings.gradle.kts)
-
 import org.gradle.api.tasks.Delete
 import org.gradle.api.file.Directory
 
@@ -20,28 +18,29 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-// 🌟 Ultimate Fix: Handle missing namespaces AND strip legacy package attributes
+// 🌟 Ultimate Fix: Automatically resolve namespace errors for ALL plugins
+// This version is state-aware to avoid "Project already evaluated" errors.
 subprojects {
-    val fixLegacyPlugin = Action<Project> {
-        if (plugins.hasPlugin("com.android.library") || plugins.hasPlugin("com.android.application")) {
-            val android = extensions.findByName("android") as? com.android.build.gradle.BaseExtension
+    val fixLegacyPlugin: (Project) -> Unit = { p ->
+        if (p.plugins.hasPlugin("com.android.library") || p.plugins.hasPlugin("com.android.application")) {
+            val android = p.extensions.findByName("android") as? com.android.build.gradle.BaseExtension
             if (android != null) {
-                val manifestFile = file("src/main/AndroidManifest.xml")
+                // 1. Force a namespace if missing (required by AGP 8.0+)
+                if (android.namespace == null || android.namespace!!.isEmpty()) {
+                    android.namespace = "com.fix.namespace.${p.name.replace("-", "_").replace(":", ".")}"
+                }
+                
+                // 2. Safely handle legacy manifest issues
+                val manifestFile = p.file("src/main/AndroidManifest.xml")
                 if (manifestFile.exists()) {
-                    val manifestContent = manifestFile.readText()
-                    
-                    // 1. Extract package name if namespace is missing
-                    if (android.namespace == null || android.namespace!!.isEmpty()) {
-                        val match = Regex("package=\"([^\"]*)\"").find(manifestContent)
-                        val packageName = match?.groups?.get(1)?.value
-                        android.namespace = packageName ?: "dev.upi.india.fix.${project.name.replace("-", "_")}"
-                    }
-
-                    // 2. Strip package attribute to satisfy AGP 8.0+
-                    if (manifestContent.contains("package=")) {
-                        val cleanedContent = manifestContent.replace(Regex("package=\"[^\"]*\""), "")
-                        manifestFile.writeText(cleanedContent)
-                        logger.lifecycle("Successfully healed manifest for legacy plugin: ${project.name}")
+                    try {
+                        val content = manifestFile.readText()
+                        if (content.contains("package=")) {
+                            val cleaned = content.replace(Regex("package=\"[^\"]*\""), "")
+                            manifestFile.writeText(cleaned)
+                        }
+                    } catch (e: Exception) {
+                        // Skip if file is locked or inaccessible
                     }
                 }
             }
@@ -49,10 +48,10 @@ subprojects {
     }
 
     if (state.executed) {
-        fixLegacyPlugin.execute(this)
+        fixLegacyPlugin(this)
     } else {
         afterEvaluate {
-            fixLegacyPlugin.execute(this)
+            fixLegacyPlugin(this)
         }
     }
 }

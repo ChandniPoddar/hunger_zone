@@ -16,15 +16,25 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> _checkUserRole() async {
-    if (user != null) {
-      final doc = await _db.collection('users').doc(user!.uid).get();
-      if (doc.exists) {
-        role = doc.data()?['role'];
+    try {
+      if (user != null) {
+        final doc = await _db.collection('users').doc(user!.uid).get();
+        if (doc.exists) {
+          role = doc.data()?['role'];
+        } else {
+          role = 'user'; // Default if doc doesn't exist
+        }
       } else {
-        role = 'user';
+        role = null;
       }
-    } else {
-      role = null;
+    } catch (e) {
+      // 🌟 Optimistic Fix: Default to 'user' if Firestore is unavailable/not setup
+      debugPrint("Firestore role check skipped (Database not setup?): $e");
+      if (user != null) {
+        role = 'user';
+      } else {
+        role = null;
+      }
     }
     notifyListeners();
   }
@@ -44,10 +54,15 @@ class AuthService extends ChangeNotifier {
         email: email,
         password: password,
       );
-      await _checkUserRole();
+      
+      // Attempt role check but don't let it block navigation
+      _checkUserRole(); 
+      
       return null;
     } on FirebaseAuthException catch (e) {
       return e.message;
+    } catch (e) {
+      return "An unexpected error occurred.";
     } finally {
       loading = false;
       notifyListeners();
@@ -68,17 +83,23 @@ class AuthService extends ChangeNotifier {
         password: password,
       );
 
-      // Create user doc in Firestore
-      await _db.collection('users').doc(result.user!.uid).set({
-        'email': email,
-        'role': 'user', // Default role
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      // Create user doc in Firestore (optional/failsafe)
+      try {
+        await _db.collection('users').doc(result.user!.uid).set({
+          'email': email,
+          'role': 'user',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      } catch (e) {
+        debugPrint("Silent Firestore setup error: $e");
+      }
 
       await _checkUserRole();
       return null;
     } on FirebaseAuthException catch (e) {
       return e.message;
+    } catch (e) {
+      return "An unexpected error occurred.";
     } finally {
       loading = false;
       notifyListeners();

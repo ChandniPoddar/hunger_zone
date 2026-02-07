@@ -1,0 +1,16 @@
+# Handle line endings automatically for files detected as text
+# and leave binary files untouched.
+* text=auto
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.dart text
+*.kts text
+*.gradle text
+*.xml text
+*.json text
+*.yaml text
+*.md text
+
+# Declare files that will always have LF line endings on checkout.
+*.sh text eol=lf

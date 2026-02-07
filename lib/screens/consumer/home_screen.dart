@@ -122,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   decoration: BoxDecoration(
                     color: Colors.black26,
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.3)),
+                    border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.3)),
                   ),
                   child: const Icon(Icons.menu, color: Color(0xFFFFD700), size: 24),
                 ),
@@ -143,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       decoration: BoxDecoration(
                         color: Colors.black38,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.2)),
+                        border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.2)),
                       ),
                       child: Text(
                         'GLOBAL EATS',
@@ -153,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           letterSpacing: 2,
                           shadows: [
                             Shadow(
-                              color: const Color(0xFFFFD700).withOpacity(0.6),
+                              color: const Color(0xFFFFD700).withValues(alpha: 0.6),
                               blurRadius: _glowAnimation.value,
                             )
                           ],
@@ -201,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         decoration: BoxDecoration(
                           color: Colors.black26,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.3)),
+                          border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.3)),
                         ),
                         child: const Icon(Icons.admin_panel_settings, color: Color(0xFFFFD700)),
                       ),
@@ -211,34 +211,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
             
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  height: 55,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E1E),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.search, color: Color(0xFFFFD700)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          "Search for your favorite food...",
-                          style: GoogleFonts.poppins(color: Colors.white38),
-                        ),
-                      ),
-                      const Icon(Icons.mic_none, color: Color(0xFFFFD700)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 32, 24, 8),
@@ -303,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   childAspectRatio: 0.85,
                 ),
                 delegate: SliverChildListDelegate([
-                  _buildEnhancedCategoryCard('Nescafe', Icons.coffee_rounded, "https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=1974&auto=format&fit=crop"),
+                  _buildEnhancedCategoryCard('Nescafe', Icons.coffee_rounded, "assets/images/nescaffe.jpeg"),
                   _buildEnhancedCategoryCard('Lipton', Icons.emoji_food_beverage_rounded, "assets/images/lipton.jpeg"),
                   _buildEnhancedCategoryCard('Canteen', Icons.restaurant_rounded, "assets/images/canteen.jpeg"),
                   _buildEnhancedCategoryCard('Fruit Corner', Icons.apple_rounded, "assets/images/fruit_corner.jpeg"),
@@ -311,46 +283,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
             
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFD700),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.flash_on, color: Colors.black, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            "FLASH DEALS",
-                            style: GoogleFonts.poppins(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        "ENDS IN: 00:14:59",
-                        style: GoogleFonts.poppins(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
             const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
           ],
         ),
@@ -382,7 +314,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 _buildNavItem(0, Icons.home_rounded, "Home"),
                 _buildNavItem(1, Icons.local_offer_rounded, "Offers"),
-                const SizedBox(width: 60), 
                 _buildNavItem(2, Icons.local_shipping_rounded, "Live Track"),
                 _buildNavItem(3, Icons.person_rounded, "Profile"),
               ],
@@ -390,7 +321,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
-    ).withOrderButton(context);
+    );
   }
 
   Widget _buildNavItem(int index, IconData icon, String label) {
@@ -409,7 +340,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             duration: const Duration(milliseconds: 300),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFFFFD700).withOpacity(0.1) : Colors.transparent,
+              color: isSelected ? const Color(0xFFFFD700).withValues(alpha: 0.1) : Colors.transparent,
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -588,55 +519,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         style: GoogleFonts.poppins(color: Colors.white, fontSize: 16),
       ),
       onTap: onTap,
-    );
-  }
-}
-
-extension on Widget {
-  Widget withOrderButton(BuildContext context) {
-    return Stack(
-      alignment: Alignment.bottomCenter,
-      clipBehavior: Clip.none,
-      children: [
-        this,
-        Positioned(
-          bottom: 40,
-          child: GestureDetector(
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
-            },
-            child: Container(
-              width: 75,
-              height: 75,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFD700),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFFD700).withOpacity(0.4),
-                    blurRadius: 15,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.restaurant_menu_rounded, color: Colors.black, size: 30),
-                  Text(
-                    "Order",
-                    style: GoogleFonts.poppins(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
