@@ -36,13 +36,22 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
+    // 🌟 Full Luxury Menu from the Price List Image
     final List<FoodItem> fruitItems = [
-      FoodItem(id: 'f1', name: 'Apple', category: 'Fruit Corner', description: 'Fresh red apple', price: 20, imageUrl: 'https://images.unsplash.com/photo-1579613832125-5d34a1325c64?q=80&w=2070&auto=format&fit=crop'),
-      FoodItem(id: 'f2', name: 'Banana', category: 'Fruit Corner', description: 'Healthy ripe banana', price: 10, imageUrl: 'https://images.unsplash.com/photo-1528825871115-3581a5387919?q=80&w=2070&auto=format&fit=crop'),
-      FoodItem(id: 'f3', name: 'Orange', category: 'Fruit Corner', description: 'Juicy orange', price: 15, imageUrl: 'https://images.unsplash.com/photo-1580052614034-c55d20b62457?q=80&w=1974&auto=format&fit=crop'),
-      FoodItem(id: 'f4', name: 'Grapes', category: 'Fruit Corner', description: 'Fresh green grapes', price: 25, imageUrl: 'https://images.unsplash.com/photo-1596399770535-b21a2a4435de?q=80&w=1974&auto=format&fit=crop'),
-      FoodItem(id: 'f5', name: 'Watermelon', category: 'Fruit Corner', description: 'Cool watermelon slices', price: 30, imageUrl: 'https://images.unsplash.com/photo-1563884072132-49504df5b9af?q=80&w=1964&auto=format&fit=crop'),
-      FoodItem(id: 'f6', name: 'Pineapple', category: 'Fruit Corner', description: 'Sweet pineapple', price: 35, imageUrl: 'https://images.unsplash.com/photo-1550258987-190a2d41a8ba?q=80&w=1974&auto=format&fit=crop'),
+      FoodItem(id: 'fc1', name: 'Mosambi Juice', category: 'Fruit Corner', description: 'Freshly squeezed premium citrus', price: 50, imageUrl: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=1974&auto=format&fit=crop'),
+      FoodItem(id: 'fc2', name: 'Mix Juice', category: 'Fruit Corner', description: 'Optimal gourmet fruit blend', price: 40, imageUrl: 'https://images.unsplash.com/photo-1622597467827-43b0ef3c9a22?q=80&w=2070&auto=format&fit=crop'),
+      FoodItem(id: 'fc3', name: 'Pineapple Juice', category: 'Fruit Corner', description: 'Pure tropical pineapple extract', price: 50, imageUrl: 'https://images.unsplash.com/photo-1550258987-190a2d41a8ba?q=80&w=1974&auto=format&fit=crop'),
+      FoodItem(id: 'fc4', name: 'Pomegranate Juice', category: 'Fruit Corner', description: 'Luxury antioxidant ruby juice', price: 120, imageUrl: 'https://images.unsplash.com/photo-1541324904594-66ca8563497b?q=80&w=1974&auto=format&fit=crop'),
+      FoodItem(id: 'fc5', name: 'Apple Juice', category: 'Fruit Corner', description: 'Crisp valley apple nectar', price: 50, imageUrl: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?q=80&w=2070&auto=format&fit=crop'),
+      FoodItem(id: 'fc6', name: 'Banana Shake', category: 'Fruit Corner', description: 'Creamy artisanal banana blend', price: 30, imageUrl: 'https://images.unsplash.com/photo-1528825871115-3581a5387919?q=80&w=2070&auto=format&fit=crop'),
+      FoodItem(id: 'fc7', name: 'Mango Shake', category: 'Fruit Corner', description: 'Velvety king of fruits shake', price: 30, imageUrl: 'https://images.unsplash.com/photo-1537640538966-79f369143f8f?q=80&w=2070&auto=format&fit=crop'),
+      FoodItem(id: 'fc8', name: 'Papaya Shake', category: 'Fruit Corner', description: 'Exotic tropical papaya refreshment', price: 30, imageUrl: 'https://images.unsplash.com/photo-1526318896980-cf78c088247c?q=80&w=1974&auto=format&fit=crop'),
+      FoodItem(id: 'fc9', name: 'Orange Juice', category: 'Fruit Corner', description: 'Sun-ripened vitamin C booster', price: 40, imageUrl: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=1974&auto=format&fit=crop'),
+      FoodItem(id: 'fc10', name: 'Beetroot Juice', category: 'Fruit Corner', description: 'Earthy iron-rich organic extract', price: 50, imageUrl: 'https://images.unsplash.com/photo-1615484477778-ca3b77940c25?q=80&w=1974&auto=format&fit=crop'),
+      FoodItem(id: 'fc11', name: 'Fruit Chaat (Full)', category: 'Fruit Corner', description: 'Gourmet seasonal medley', price: 100, imageUrl: 'https://images.unsplash.com/photo-1519996529931-28324d5a630e?q=80&w=1974&auto=format&fit=crop'),
+      FoodItem(id: 'fc12', name: 'Fruit Chaat (Half)', category: 'Fruit Corner', description: 'Boutique fruit snack', price: 50, imageUrl: 'https://images.unsplash.com/photo-1519996529931-28324d5a630e?q=80&w=1974&auto=format&fit=crop'),
+      FoodItem(id: 'fc13', name: 'Premium Curd', category: 'Fruit Corner', description: 'Freshly cultured creamy curd', price: 15, imageUrl: 'https://images.unsplash.com/photo-1485921325833-c519f76c4927?q=80&w=1964&auto=format&fit=crop'),
+      FoodItem(id: 'fc14', name: 'Farm Milk', category: 'Fruit Corner', description: 'Pure high-quality toned milk', price: 25, imageUrl: 'https://images.unsplash.com/photo-1550583724-125581f77833?q=80&w=1974&auto=format&fit=crop'),
     ];
 
     return Scaffold(
@@ -73,11 +82,13 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
               backgroundColor: Colors.black,
               iconTheme: const IconThemeData(color: Color(0xFFFFD700)),
               flexibleSpace: FlexibleSpaceBar(
+                centerTitle: true,
                 title: Text(
-                  'Fresh Fruit Corner',
-                  style: GoogleFonts.poppins(
+                  'GLOBAL FRUIT BAR',
+                  style: GoogleFonts.monoton(
                     color: const Color(0xFFFFD700),
-                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    letterSpacing: 2,
                   ),
                 ),
                 background: Stack(
@@ -97,7 +108,7 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
                           colors: [
                             Colors.black.withOpacity(0.7),
                             Colors.transparent,
-                            Colors.black.withOpacity(0.9)
+                            Colors.black
                           ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
@@ -109,11 +120,11 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
               ),
             ),
             SliverPadding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.7,
+                  childAspectRatio: 0.75,
                   mainAxisSpacing: 16,
                   crossAxisSpacing: 16,
                 ),
