@@ -31,36 +31,36 @@ class ProductCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image Section
+          // 🌟 Intelligent Image Section (Supports Assets & Network)
           Expanded(
-            flex: 4, // Increased flex to give more space to image
+            flex: 4,
             child: ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  foodItem.imageUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: foodItem.imageUrl,
-                          fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: Colors.grey[900],
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xFFFFD700),
-                                strokeWidth: 2,
+                  foodItem.imageUrl.isEmpty
+                      ? _buildPlaceholder()
+                      : foodItem.imageUrl.startsWith('assets')
+                          ? Image.asset(
+                              foodItem.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+                            )
+                          : CachedNetworkImage(
+                              imageUrl: foodItem.imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: Colors.grey[900],
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Color(0xFFFFD700),
+                                    strokeWidth: 2,
+                                  ),
+                                ),
                               ),
+                              errorWidget: (context, url, error) => _buildPlaceholder(),
                             ),
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            color: Colors.grey[900],
-                            child: const Icon(Icons.fastfood, color: Color(0xFFFFD700), size: 40),
-                          ),
-                        )
-                      : Container(
-                          color: Colors.grey[900],
-                          child: const Icon(Icons.fastfood, color: Color(0xFFFFD700), size: 40),
-                        ),
                   // Price Tag Overlay
                   Positioned(
                     top: 10,
@@ -89,9 +89,9 @@ class ProductCard extends StatelessWidget {
 
           // Info Section
           Expanded(
-            flex: 3, // Increased flex to prevent overflow of text and button
+            flex: 3,
             child: Padding(
-              padding: const EdgeInsets.all(10.0), // Slightly reduced padding
+              padding: const EdgeInsets.all(10.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -102,18 +102,18 @@ class ProductCard extends StatelessWidget {
                     style: GoogleFonts.poppins(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 13, // Slightly reduced font size
+                      fontSize: 13,
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Expanded( // Wrapped in Expanded to prevent text overflow
+                  Expanded(
                     child: Text(
                       foodItem.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
                         color: Colors.white60,
-                        fontSize: 9, // Slightly reduced font size
+                        fontSize: 9,
                       ),
                     ),
                   ),
@@ -137,7 +137,7 @@ class ProductCard extends StatelessWidget {
                         );
                       },
                       child: Container(
-                        padding: const EdgeInsets.all(6), // Slightly reduced padding
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFD700),
                           borderRadius: BorderRadius.circular(10),
@@ -158,6 +158,13 @@ class ProductCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      color: Colors.grey[900],
+      child: const Icon(Icons.fastfood, color: Color(0xFFFFD700), size: 40),
     );
   }
 }
