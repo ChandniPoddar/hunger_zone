@@ -8,9 +8,7 @@ import '../../services/auth_service.dart';
 import '../../providers/cart_provider.dart';
 import '../../models/food_item.dart';
 
-import '../admin/admin_dashboard.dart';
 import '../auth/login_screen.dart';
-import 'cart_screen.dart';
 import '../profile/profile_screen.dart';
 
 import 'product_list_screen.dart';
@@ -27,7 +25,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  final bool _isAdmin = true; 
   late final List<FoodItem> _products;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -191,24 +188,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ],
                 ),
               ),
-              actions: [
-                if (_isAdmin)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
-                    child: IconButton(
-                      icon: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.black26,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.3)),
-                        ),
-                        child: const Icon(Icons.admin_panel_settings, color: Color(0xFFFFD700)),
-                      ),
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminDashboard())),
-                    ),
-                  ),
-              ],
             ),
             
             SliverToBoxAdapter(

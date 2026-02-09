@@ -14,3 +14,9 @@
 
 # Declare files that will always have LF line endings on checkout.
 *.sh text eol=lf
+
+# Ensure generated files have consistent line endings to avoid warnings
+generated_plugin_registrant.cc text
+generated_plugin_registrant.h text
+generated_plugins.cmake text
+GeneratedPluginRegistrant.swift text
