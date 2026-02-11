@@ -15,43 +15,49 @@ subprojects {
 }
 
 subprojects {
-    project.evaluationDependsOn(":app")
+    // Only call evaluationDependsOn for projects that actually exist and aren't the app itself
+    if (project.name != "app") {
+        project.evaluationDependsOn(":app")
+    }
 }
 
-// 🌟 Ultimate Fix: Automatically resolve namespace errors for ALL plugins
-// This version is state-aware to avoid "Project already evaluated" errors.
+// 🌟 Ultimate Fix: Automatically resolve namespace errors and Java compatibility for ALL plugins
 subprojects {
-    val fixLegacyPlugin: (Project) -> Unit = { p ->
-        if (p.plugins.hasPlugin("com.android.library") || p.plugins.hasPlugin("com.android.application")) {
-            val android = p.extensions.findByName("android") as? com.android.build.gradle.BaseExtension
-            if (android != null) {
-                // 1. Force a namespace if missing (required by AGP 8.0+)
-                if (android.namespace == null || android.namespace!!.isEmpty()) {
-                    android.namespace = "com.fix.namespace.${p.name.replace("-", "_").replace(":", ".")}"
-                }
-                
-                // 2. Safely handle legacy manifest issues
-                val manifestFile = p.file("src/main/AndroidManifest.xml")
-                if (manifestFile.exists()) {
-                    try {
-                        val content = manifestFile.readText()
-                        if (content.contains("package=")) {
-                            val cleaned = content.replace(Regex("package=\"[^\"]*\""), "")
-                            manifestFile.writeText(cleaned)
-                        }
-                    } catch (e: Exception) {
-                        // Skip if file is locked or inaccessible
+    val fixLegacyPlugin: Project.() -> Unit = {
+        // 1. Suppress "obsolete source value 8" warnings globally
+        tasks.withType<JavaCompile>().configureEach {
+            options.compilerArgs.add("-Xlint:-options")
+        }
+
+        val android = extensions.findByName("android") as? com.android.build.gradle.BaseExtension
+        android?.let {
+            // 2. Force a namespace if missing (required by AGP 8.0+)
+            if (it.namespace == null || it.namespace!!.isEmpty()) {
+                it.namespace = "com.fix.namespace.${project.name.replace("-", "_").replace(":", ".")}"
+            }
+            
+            // 3. Safely handle legacy manifest issues
+            val manifestFile = project.file("src/main/AndroidManifest.xml")
+            if (manifestFile.exists()) {
+                try {
+                    val content = manifestFile.readText()
+                    if (content.contains("package=")) {
+                        val cleaned = content.replace(Regex("package=\"[^\"]*\""), "")
+                        manifestFile.writeText(cleaned)
                     }
+                } catch (e: Exception) {
+                    // Skip if file is locked or inaccessible
                 }
             }
         }
     }
 
+    // Check project state to avoid "already evaluated" errors
     if (state.executed) {
-        fixLegacyPlugin(this)
+        fixLegacyPlugin()
     } else {
         afterEvaluate {
-            fixLegacyPlugin(this)
+            fixLegacyPlugin()
         }
     }
 }

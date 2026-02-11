@@ -5,7 +5,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../services/auth_service.dart';
-import 'phone_auth_screen.dart';
+import '../consumer/home_screen.dart';
+import 'login_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -90,9 +91,9 @@ class _SignupScreenState extends State<SignupScreen>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.black.withOpacity(0.9),
-                    Colors.black.withOpacity(0.6),
-                    const Color(0xFF0F0F0F).withOpacity(0.8),
+                    Colors.black.withValues(alpha: 0.9),
+                    Colors.black.withValues(alpha: 0.6),
+                    const Color(0xFF0F0F0F).withValues(alpha: 0.8),
                   ],
                   begin: Alignment.bottomCenter,
                   end: Alignment.topCenter,
@@ -238,7 +239,8 @@ class _SignupScreenState extends State<SignupScreen>
                                             return;
                                           }
 
-                                          final msg = await auth.signUp(
+                                          final authService = context.read<AuthService>();
+                                          final msg = await authService.signUp(
                                             email: email,
                                             password: password,
                                           );
@@ -250,12 +252,12 @@ class _SignupScreenState extends State<SignupScreen>
 
                                           if (!mounted) return;
 
-                                          Navigator.pushReplacement(
+                                          Navigator.pushAndRemoveUntil(
                                             context,
                                             MaterialPageRoute(
-                                              builder: (_) =>
-                                                  const PhoneAuthScreen(),
+                                              builder: (_) => const HomeScreen(),
                                             ),
+                                            (route) => false,
                                           );
                                         },
                                         child: Text(
@@ -318,7 +320,7 @@ class _SignupScreenState extends State<SignupScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.5),
+        color: Colors.black.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.grey.shade800),
       ),
