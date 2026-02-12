@@ -255,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 delegate: SliverChildListDelegate([
                   _buildEnhancedCategoryCard('Nescafe', Icons.coffee_rounded, "assets/images/nescaffe.jpeg"),
-                  _buildEnhancedCategoryCard('Lipton', Icons.emoji_food_beverage_rounded, "assets/images/lipton.jpeg"),
+                  _buildEnhancedCategoryCard('Lipton', Icons.emoji_food_beverage_rounded, "assets/images/lipton_image.jpeg"),
                   _buildEnhancedCategoryCard('Canteen', Icons.restaurant_rounded, "assets/images/canteen.jpeg"),
                   _buildEnhancedCategoryCard('Fruit Corner', Icons.apple_rounded, "assets/images/fruit_corner.jpeg"),
                 ]),
