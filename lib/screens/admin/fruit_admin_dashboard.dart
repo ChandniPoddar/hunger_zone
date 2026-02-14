@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
 
@@ -16,24 +17,19 @@ class FruitAdminDashboard extends StatefulWidget {
 class _FruitAdminDashboardState extends State<FruitAdminDashboard> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  late AnimationController _listController;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   @override
   void initState() {
     super.initState();
-    // Optimized: Faster animation durations
-    _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
     _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeIn);
-    _listController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    
     _fadeController.forward();
-    _listController.forward();
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
-    _listController.dispose();
     super.dispose();
   }
 
@@ -54,31 +50,48 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard> with TickerPr
               ),
             ),
           ),
+          
           SafeArea(
             child: FadeTransition(
               opacity: _fadeAnimation,
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  _buildHeader(context),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildSectionTitle("Freshness Analytics"),
-                          const SizedBox(height: 20),
-                          _buildStatsGrid(),
-                          const SizedBox(height: 32),
-                          _buildSectionTitle("Juice & Fruit Queue"),
-                          const SizedBox(height: 16),
-                        ],
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _db.collection('orders')
+                    .where('outlet', isEqualTo: 'Fruit Corner')
+                    .orderBy('createdAt', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  int totalOrders = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                  double dailyRevenue = 0;
+                  if (snapshot.hasData) {
+                    for (var doc in snapshot.data!.docs) {
+                      dailyRevenue += (doc.data() as Map<String, dynamic>)['total'] ?? 0.0;
+                    }
+                  }
+
+                  return CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      _buildHeader(context),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionTitle("Freshness Analytics"),
+                              const SizedBox(height: 20),
+                              _buildStatsGrid(totalOrders, dailyRevenue),
+                              const SizedBox(height: 32),
+                              _buildSectionTitle("Live Juice Queue"),
+                              const SizedBox(height: 16),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  _buildOrdersList(),
-                ],
+                      _buildOrdersList(snapshot),
+                    ],
+                  );
+                }
               ),
             ),
           ),
@@ -89,10 +102,7 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard> with TickerPr
 
   Widget _buildHeader(BuildContext context) {
     return SliverAppBar(
-      expandedHeight: 200,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      pinned: true,
+      expandedHeight: 200, backgroundColor: Colors.transparent, elevation: 0, pinned: true,
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           fit: StackFit.expand,
@@ -100,18 +110,8 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard> with TickerPr
             CachedNetworkImage(
               imageUrl: "https://images.unsplash.com/photo-1610970881699-44a5587cabec?q=80&w=2070&auto=format&fit=crop",
               fit: BoxFit.cover,
-              placeholder: (context, url) => Container(color: Colors.black12),
-              errorWidget: (context, url, error) => Container(color: Colors.black),
             ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black.withValues(alpha: 0.2), Colors.black],
-                ),
-              ),
-            ),
+            Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withValues(alpha: 0.3), Colors.black]))),
             Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -127,11 +127,7 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard> with TickerPr
       ),
       actions: [
         IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.black45, shape: BoxShape.circle, border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.8))),
-            child: const Icon(Icons.logout, color: Color(0xFFFFD700), size: 20),
-          ),
+          icon: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.black45, shape: BoxShape.circle, border: Border.all(color: const Color(0xFFFFD700))), child: const Icon(Icons.logout, color: Color(0xFFFFD700), size: 20)),
           onPressed: () async {
             await context.read<AuthService>().logout();
             Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
@@ -152,19 +148,15 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard> with TickerPr
     );
   }
 
-  Widget _buildStatsGrid() {
+  Widget _buildStatsGrid(int total, double revenue) {
     return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 1.5,
+      shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2, mainAxisSpacing: 16, crossAxisSpacing: 16, childAspectRatio: 1.5,
       children: [
-        _buildStatCard("Fruit Bowls", "64", Icons.bakery_dining_outlined),
-        _buildStatCard("Juices Today", "128", Icons.local_drink_outlined),
-        _buildStatCard("Vitamin C Boost", "High", Icons.health_and_safety_outlined),
-        _buildStatCard("Fresh Stock", "92%", Icons.eco_outlined),
+        _buildStatCard("Daily Revenue", "₹${revenue.toStringAsFixed(0)}", Icons.payments_outlined),
+        _buildStatCard("Total Juices", "$total", Icons.local_drink_outlined),
+        _buildStatCard("Boost", "Active", Icons.health_and_safety_outlined),
+        _buildStatCard("Fresh Stock", "Live", Icons.eco_outlined),
       ],
     );
   }
@@ -174,82 +166,50 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard> with TickerPr
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Icon(icon, color: const Color(0xFFFFD700), size: 24),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(value, style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-              Text(label, style: GoogleFonts.poppins(color: Colors.white38, fontSize: 11)),
-            ],
-          ),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(value, style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            Text(label, style: GoogleFonts.poppins(color: Colors.white38, fontSize: 11)),
+          ]),
         ],
       ),
     );
   }
 
-  Widget _buildOrdersList() {
+  Widget _buildOrdersList(AsyncSnapshot<QuerySnapshot> snapshot) {
+    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+      return SliverToBoxAdapter(child: Center(child: Padding(padding: const EdgeInsets.only(top: 40), child: Text("No orders yet", style: GoogleFonts.poppins(color: Colors.white38)))));
+    }
+    final docs = snapshot.data!.docs;
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            return AnimatedBuilder(
-              animation: _listController,
-              builder: (context, child) {
-                final double slide = (1.0 - CurvedAnimation(parent: _listController, curve: Interval(index * 0.1, 1.0, curve: Curves.easeOut)).value) * 40.0;
-                return Transform.translate(
-                  offset: Offset(0, slide),
-                  child: Opacity(opacity: CurvedAnimation(parent: _listController, curve: Interval(index * 0.1, 1.0, curve: Curves.easeOut)).value, child: child),
-                );
-              },
-              child: _buildOrderCard(index),
-            );
-          },
-          childCount: 4,
-        ),
-      ),
+      sliver: SliverList(delegate: SliverChildBuilderDelegate((context, index) {
+        final order = docs[index].data() as Map<String, dynamic>;
+        return _buildOrderCard(order, index);
+      }, childCount: docs.length)),
     );
   }
 
-  Widget _buildOrderCard(int index) {
+  Widget _buildOrderCard(Map<String, dynamic> order, int index) {
+    final List items = order['items'] ?? [];
+    final String itemsSummary = items.map((i) => "${i['quantity']}x ${i['name']}").join(", ");
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16), padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withValues(alpha: 0.05))),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(color: const Color(0xFFFFD700).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-            child: const Icon(Icons.waves, color: Color(0xFFFFD700)),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("Order #FJ-10${index + 1}", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
-                Text("1x Mixed Fruit Juice", style: GoogleFonts.poppins(color: Colors.white60, fontSize: 12)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text("₹80", style: GoogleFonts.poppins(color: const Color(0xFFFFD700), fontWeight: FontWeight.bold)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                child: Text("Blending", style: GoogleFonts.poppins(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold)),
-              ),
-            ],
-          ),
-        ],
-      ),
+      child: Row(children: [
+        Container(width: 50, height: 50, decoration: BoxDecoration(color: const Color(0xFFFFD700).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.waves, color: Color(0xFFFFD700))),
+        const SizedBox(width: 16),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text("Order ${order['orderId']?.toString().split('-').last ?? '...'}", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
+          Text(itemsSummary, maxLines: 1, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(color: Colors.white60, fontSize: 12)),
+        ])),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text("₹${order['total']}", style: GoogleFonts.poppins(color: const Color(0xFFFFD700), fontWeight: FontWeight.bold)),
+          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Text(order['status'] ?? "Pending", style: GoogleFonts.poppins(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold))),
+        ]),
+      ]),
     );
   }
 }

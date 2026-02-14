@@ -95,6 +95,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
+  // Method to refresh the home screen
+  void _refreshHomeScreen() {
+    _fadeController.reset();
+    _fadeController.forward();
+    setState(() {
+      _selectedIndex = 0;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -307,9 +316,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     bool isSelected = _selectedIndex == index;
     return GestureDetector(
       onTap: () {
-        setState(() => _selectedIndex = index);
-        if (label == "Profile") {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+        if (label == "Home") {
+          _refreshHomeScreen();
+        } else {
+          setState(() => _selectedIndex = index);
+          if (label == "Profile") {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+          }
         }
       },
       child: Column(

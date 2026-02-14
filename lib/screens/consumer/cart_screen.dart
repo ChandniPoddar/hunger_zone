@@ -8,7 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 class CartScreen extends StatefulWidget {
-  final String? outletName; // 🌟 Support for individual outlet carts
+  final String? outletName; 
 
   const CartScreen({super.key, this.outletName});
 
@@ -21,7 +21,7 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
   late AnimationController _controller;
   late Animation<double> _fade;
 
-  final String razorpayKey = 'rzp_test_SAodWBg2uq2dkh'; // Replace with your key
+  final String razorpayKey = 'rzp_test_SAodWBg2uq2dkh'; 
 
   @override
   void initState() {
@@ -39,7 +39,6 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
     _controller.forward();
   }
 
-  // 🌟 Dynamic imagery for each outlet's cart
   String _getOutletImage() {
     switch (widget.outletName) {
       case 'Nescafe':
@@ -65,7 +64,7 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
   void _openCheckout(double amount) {
     var options = {
       'key': razorpayKey,
-      'amount': (amount * 100).toInt(), // Amount in paise
+      'amount': (amount * 100).toInt(),
       'name': widget.outletName ?? 'Global Eats',
       'description': 'Payment for Order',
       'prefill': {'contact': '9876543210', 'email': 'user@globaleats.com'},
@@ -78,19 +77,28 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
     }
   }
 
-  void _handlePaymentSuccess(PaymentSuccessResponse response) {
-    Fluttertoast.showToast(
-      msg: "Your payment is successful",
-      backgroundColor: Colors.green,
-      textColor: Colors.white,
-      toastLength: Toast.LENGTH_LONG,
-    );
-    context.read<CartProvider>().clear(); 
-    Navigator.pop(context);
+  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    final cart = context.read<CartProvider>();
+    
+    // 🌟 Corrected: Passing the specific outlet name to placeOrder
+    final error = await cart.placeOrder(specificOutlet: widget.outletName); 
+
+    if (error == null) {
+      Fluttertoast.showToast(
+        msg: "Payment Successful! Order placed.",
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        toastLength: Toast.LENGTH_LONG,
+      );
+      if (!mounted) return;
+      Navigator.pop(context); 
+    } else {
+      Fluttertoast.showToast(msg: "Order Database Error: $error", backgroundColor: Colors.red);
+    }
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
-    Fluttertoast.showToast(msg: "Payment Failed", backgroundColor: Colors.red);
+    Fluttertoast.showToast(msg: "Payment Failed: ${response.message}", backgroundColor: Colors.red);
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {
@@ -103,10 +111,9 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
       backgroundColor: Colors.black,
       body: Consumer<CartProvider>(
         builder: (context, cart, child) {
-          // Filter items based on outlet if provided
           final items = widget.outletName == null 
               ? cart.items.values.toList()
-              : cart.items.values.where((item) => item.foodItem.category == widget.outletName).toList();
+              : cart.items.values.where((item) => cart.getNormalizedOutlet(item.foodItem.category) == widget.outletName).toList();
 
           final totalAmount = items.fold(0.0, (sum, item) => sum + item.totalPrice);
 
@@ -140,7 +147,7 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
                         Container(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Colors.black.withOpacity(0.7), Colors.transparent, Colors.black],
+                              colors: [Colors.black.withValues(alpha: 0.7), Colors.transparent, Colors.black],
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                             ),
@@ -156,7 +163,7 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.shopping_cart_outlined, size: 80, color: const Color(0xFFFFD700).withOpacity(0.5)),
+                          Icon(Icons.shopping_cart_outlined, size: 80, color: const Color(0xFFFFD700).withValues(alpha: 0.5)),
                           const SizedBox(height: 16),
                           Text(
                             'This outlet cart is empty!',
@@ -179,7 +186,7 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
                             decoration: BoxDecoration(
                               color: const Color(0xFF1E1E1E),
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: Colors.white.withOpacity(0.05)),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
                             ),
                             child: Row(
                               children: [
@@ -251,9 +258,9 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
                       padding: const EdgeInsets.all(24),
                       margin: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E1E1E).withOpacity(0.8),
+                        color: const Color(0xFF1E1E1E).withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(25),
-                        border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.2)),
+                        border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.2)),
                       ),
                       child: Column(
                         children: [
@@ -272,25 +279,28 @@ class _CartScreenState extends State<CartScreen> with SingleTickerProviderStateM
                             width: double.infinity,
                             height: 55,
                             child: ElevatedButton(
-                              onPressed: () {
+                              onPressed: () async {
                                 if (Platform.isAndroid || Platform.isIOS) {
                                   _openCheckout(totalAmount);
                                 } else {
-                                  // Simplified demo response for browser/desktop
-                                  Fluttertoast.showToast(msg: "Your payment is successful");
-                                  cart.clear();
-                                  Navigator.pop(context);
+                                  // 🌟 Corrected: Passing the specific outlet name to placeOrder
+                                  final error = await cart.placeOrder(specificOutlet: widget.outletName);
+                                  if (error == null) {
+                                    Fluttertoast.showToast(msg: "Order Success!");
+                                    if (!mounted) return;
+                                    Navigator.pop(context);
+                                  }
                                 }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFFFD700),
                                 foregroundColor: Colors.black,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                shadowColor: const Color(0xFFFFD700).withOpacity(0.4),
+                                shadowColor: const Color(0xFFFFD700).withValues(alpha: 0.4),
                                 elevation: 8,
                               ),
                               child: Text(
-                                'PAY WITH RAZORPAY',
+                                'COMPLETE ORDER',
                                 style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.2),
                               ),
                             ),

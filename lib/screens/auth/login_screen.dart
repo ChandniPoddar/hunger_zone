@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../services/auth_service.dart';
 import '../consumer/home_screen.dart';
 import 'signup_screen.dart';
+import 'operator_user.dart';
 import '../admin/nescafe_admin_dashboard.dart';
 import '../admin/lipton_admin_dashboard.dart';
 import '../admin/canteen_admin_dashboard.dart';
@@ -292,9 +293,14 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                         const SizedBox(height: 20),
                         
-                        // Animated "Back to selection" text
                         TextButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (_) => const OperatorUserScreen()),
+                              (route) => false,
+                            );
+                          },
                           child: TweenAnimationBuilder<double>(
                             duration: const Duration(seconds: 1),
                             tween: Tween(begin: 0.0, end: 1.0),

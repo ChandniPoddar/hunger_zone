@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -13,7 +14,8 @@ class AuthService extends ChangeNotifier {
   User? get user => _auth.currentUser;
 
   AuthService() {
-    _syncRoleLocally();
+    _quickInitRole();
+    _checkSessionExpiry();
   }
 
   final Map<String, Map<String, String>> _adminCredentials = {
@@ -23,7 +25,37 @@ class AuthService extends ChangeNotifier {
     'fruit@gmail.com': {'pass': 'fruit123', 'outlet': 'Fruit Corner'},
   };
 
-  void _syncRoleLocally() {
+  static const String _sessionKey = 'login_timestamp';
+  static const int _oneWeekMillis = 7 * 24 * 60 * 60 * 1000;
+
+  Future<void> _checkSessionExpiry() async {
+    try {
+      final email = user?.email?.toLowerCase();
+      // Only check session expiry for non-hardcoded admin users
+      if (email != null && !_adminCredentials.containsKey(email)) {
+        final prefs = await SharedPreferences.getInstance();
+        final loginTime = prefs.getInt(_sessionKey);
+        if (loginTime != null) {
+          if (DateTime.now().millisecondsSinceEpoch - loginTime > _oneWeekMillis) {
+            await logout();
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveLoginTime() async {
+    try {
+      final email = user?.email?.toLowerCase();
+      // Only save login time for regular users, not outlet admins
+      if (email != null && !_adminCredentials.containsKey(email)) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(_sessionKey, DateTime.now().millisecondsSinceEpoch);
+      }
+    } catch (_) {}
+  }
+
+  void _quickInitRole() {
     if (user != null) {
       final email = user!.email?.toLowerCase();
       if (_adminCredentials.containsKey(email)) {
@@ -37,7 +69,13 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> _checkUserRole() async {
-    if (user == null) return;
+    if (user == null) {
+      role = null;
+      outletName = null;
+      notifyListeners();
+      return;
+    }
+
     final email = user!.email?.toLowerCase();
     if (_adminCredentials.containsKey(email)) {
       role = 'admin';
@@ -45,16 +83,19 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
       return;
     }
+
     try {
-      final doc = await _db.collection('users').doc(user!.uid).get();
+      final doc = await _db.collection('users').doc(user!.uid).get().timeout(const Duration(seconds: 3));
       if (doc.exists) {
         role = doc.data()?['role'];
         outletName = doc.data()?['outletName'];
       } else {
         role = 'user';
       }
-      notifyListeners();
-    } catch (_) {}
+    } catch (_) {
+      role = 'user';
+    }
+    notifyListeners();
   }
 
   bool get isAdmin => role == 'admin';
@@ -65,21 +106,30 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
       final lowEmail = email.toLowerCase().trim();
 
-      // Set admin details instantly before even calling Firebase to prevent buffering
       if (_adminCredentials.containsKey(lowEmail) && _adminCredentials[lowEmail]!['pass'] == password) {
         role = 'admin';
         outletName = _adminCredentials[lowEmail]!['outlet'];
       }
 
-      await _auth.signInWithEmailAndPassword(email: lowEmail, password: password);
-      _syncRoleLocally();
-      return null;
-    } on FirebaseAuthException catch (e) {
-      if ((e.code == 'user-not-found' || e.code == 'invalid-credential') &&
-          _adminCredentials.containsKey(email.toLowerCase().trim())) {
-        return await _autoRegisterAdmin(email.toLowerCase().trim(), password);
+      try {
+        await _auth.signInWithEmailAndPassword(email: lowEmail, password: password);
+        await _saveLoginTime(); 
+      } on FirebaseAuthException catch (e) {
+        if ((e.code == 'user-not-found' || e.code == 'invalid-credential' || e.code == 'invalid-email') &&
+            _adminCredentials.containsKey(lowEmail)) {
+          final res = await _autoRegisterAdmin(lowEmail, password);
+          if (res == null) await _saveLoginTime();
+          return res;
+        }
+        return e.message;
       }
-      return e.message;
+      
+      if (!_adminCredentials.containsKey(lowEmail)) {
+        await _checkUserRole();
+      }
+      return null;
+    } catch (e) {
+      return "An unexpected error occurred.";
     } finally {
       loading = false;
       notifyListeners();
@@ -96,6 +146,7 @@ class AuthService extends ChangeNotifier {
         'role': 'user',
         'createdAt': FieldValue.serverTimestamp(),
       });
+      await _saveLoginTime(); 
       role = 'user';
       return null;
     } on FirebaseAuthException catch (e) {
@@ -124,7 +175,11 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    await _auth.signOut();
+    try {
+      await _auth.signOut();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_sessionKey);
+    } catch (_) {}
     role = null;
     outletName = null;
     notifyListeners();

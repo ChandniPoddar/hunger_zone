@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
+import '../services/auth_service.dart';
 import 'auth/operator_user.dart';
+import 'consumer/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -37,19 +40,53 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateNext() async {
+    // Wait for splash animation/delay
     await Future.delayed(const Duration(seconds: 4));
     if (!mounted) return;
 
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const OperatorUserScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 800),
-      ),
-    );
+    final auth = Provider.of<AuthService>(context, listen: false);
+
+    // Auto-login logic
+    if (auth.user != null) {
+      final email = auth.user!.email?.toLowerCase();
+      
+      // Hardcoded Admin Emails
+      final adminEmails = [
+        'nescafe@gmail.com',
+        'lipton@gmail.com',
+        'canteen@gmail.com',
+        'fruit@gmail.com'
+      ];
+
+      // 🌟 Correct Logic: Session ONLY applies to regular users.
+      // Admins MUST always re-login when the app restarts.
+      if (adminEmails.contains(email)) {
+        await auth.logout(); // Force logout for admins on restart
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const OperatorUserScreen()),
+        );
+      } else {
+        // Direct navigation to consumer home screen (7-day session applies)
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    } else {
+      // No user logged in
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => const OperatorUserScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 800),
+        ),
+      );
+    }
   }
 
   @override
@@ -64,7 +101,6 @@ class _SplashScreenState extends State<SplashScreen>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Background Image
           Positioned.fill(
             child: CachedNetworkImage(
               imageUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop",
@@ -74,15 +110,14 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
 
-          // Dark Overlay with subtle Golden gradient
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.black.withOpacity(0.95),
-                    Colors.black.withOpacity(0.6),
-                    const Color(0xFF0F0F0F).withOpacity(0.9),
+                    Colors.black.withValues(alpha: 0.95),
+                    Colors.black.withValues(alpha: 0.6),
+                    const Color(0xFF0F0F0F).withValues(alpha: 0.9),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -91,7 +126,6 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
 
-          // Main Content
           Center(
             child: FadeTransition(
               opacity: _fadeAnimation,
@@ -100,7 +134,6 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Premium Logo Container
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
