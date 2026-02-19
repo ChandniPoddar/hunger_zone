@@ -33,6 +33,15 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard> with Tick
     super.dispose();
   }
 
+  Future<void> _updateOrderStatus(String docId, String currentStatus) async {
+    String nextStatus = 'Pending';
+    if (currentStatus == 'Pending') nextStatus = 'Preparing';
+    else if (currentStatus == 'Preparing') nextStatus = 'Completed';
+    else if (currentStatus == 'Completed') nextStatus = 'Pending';
+
+    await _db.collection('orders').doc(docId).update({'status': nextStatus});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,7 +70,7 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard> with Tick
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
-                    return Center(child: Text("Query Error: Check Firestore Indexes", style: GoogleFonts.poppins(color: Colors.redAccent)));
+                    return Center(child: Text("Connection Error", style: GoogleFonts.poppins(color: Colors.redAccent)));
                   }
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator(color: Color(0xFFFFD700)));
@@ -87,7 +96,7 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard> with Tick
                               const SizedBox(height: 20),
                               _buildStatsGrid(totalOrders, dailyRevenue),
                               const SizedBox(height: 32),
-                              _buildSectionTitle("Live Order Queue"),
+                              _buildSectionTitle("Recent Orders"),
                               const SizedBox(height: 16),
                             ],
                           ),
@@ -190,9 +199,16 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard> with Tick
     return SliverPadding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       sliver: SliverList(delegate: SliverChildBuilderDelegate((context, index) {
-        final order = docs[index].data() as Map<String, dynamic>;
+        final doc = docs[index];
+        final order = doc.data() as Map<String, dynamic>;
         final List items = order['items'] ?? [];
         final String itemsSummary = items.map((i) => "${i['quantity']}x ${i['name']}").join(", ");
+        final String status = order['status'] ?? 'Pending';
+
+        Color statusColor = Colors.orange;
+        if (status == 'Preparing') statusColor = Colors.blue;
+        if (status == 'Completed') statusColor = Colors.green;
+
         return Container(
           margin: const EdgeInsets.only(bottom: 16), padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white.withValues(alpha: 0.05))),
@@ -205,7 +221,15 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard> with Tick
             ])),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Text("₹${order['total']}", style: GoogleFonts.poppins(color: const Color(0xFFFFD700), fontWeight: FontWeight.bold)),
-              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Text(order['status'] ?? "Pending", style: GoogleFonts.poppins(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold))),
+              const SizedBox(height: 4),
+              GestureDetector(
+                onTap: () => _updateOrderStatus(doc.id, status),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: statusColor.withValues(alpha: 0.5))),
+                  child: Text(status, style: GoogleFonts.poppins(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ),
             ]),
           ]),
         );

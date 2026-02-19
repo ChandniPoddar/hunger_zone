@@ -1,13 +1,32 @@
 {
   "project_info": {
-    "project_number": "249127948591",
-    "project_id": "ggi-canteen",
-    "storage_bucket": "ggi-canteen.firebasestorage.app"
+    "project_number": "344306108810",
+    "project_id": "hunger-zone-45bcf",
+    "storage_bucket": "hunger-zone-45bcf.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:249127948591:android:8e61ddb5fe36ba5aed11da",
+        "mobilesdk_app_id": "1:344306108810:android:9e95dad4a9d5603ac62073",
+        "android_client_info": {
+          "package_name": "GGI.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBdNXce9aRIzz79en6Csz20mgWgP-F5vE0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:344306108810:android:2996734aa5b3e411c62073",
         "android_client_info": {
           "package_name": "com.example.ggi_canteen"
         }
@@ -15,7 +34,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBnWkGckLiy35zci6kh1t2uIas6P7imxNw"
+          "current_key": "AIzaSyBdNXce9aRIzz79en6Csz20mgWgP-F5vE0"
         }
       ],
       "services": {

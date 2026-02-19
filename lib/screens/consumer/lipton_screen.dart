@@ -37,6 +37,9 @@ class _LiptonScreenState extends State<LiptonScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.primaryColor;
+
     final List<FoodItem> liptonItems = [
       FoodItem(id: 'l1', name: 'Ice Tea Lemon', category: 'Lipton', description: 'Refreshing lemon ice tea', price: 25, imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=1964&auto=format&fit=crop'),
       FoodItem(id: 'l2', name: 'Ice Tea Peach', category: 'Lipton', description: 'Peach flavored ice tea', price: 25, imageUrl: 'https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?q=80&w=2070&auto=format&fit=crop'),
@@ -49,18 +52,18 @@ class _LiptonScreenState extends State<LiptonScreen> with SingleTickerProviderSt
     ];
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: theme.scaffoldBackgroundColor,
       floatingActionButton: Consumer<CartProvider>(
         builder: (context, cart, _) {
           final liptonCount = cart.items.values.where((item) => item.foodItem.category == 'Lipton').length;
           if (liptonCount == 0) return const SizedBox.shrink();
           return FloatingActionButton.extended(
-            backgroundColor: const Color(0xFFFFD700),
+            backgroundColor: primaryColor,
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen(outletName: 'Lipton'))),
-            icon: const Icon(Icons.emoji_food_beverage_rounded, color: Colors.black),
+            icon: Icon(Icons.emoji_food_beverage_rounded, color: theme.brightness == Brightness.dark ? Colors.black : Colors.white),
             label: Text(
               'Lipton Cart ($liptonCount)',
-              style: GoogleFonts.poppins(color: Colors.black, fontWeight: FontWeight.bold),
+              style: GoogleFonts.poppins(color: theme.brightness == Brightness.dark ? Colors.black : Colors.white, fontWeight: FontWeight.bold),
             ),
           );
         },
@@ -73,13 +76,13 @@ class _LiptonScreenState extends State<LiptonScreen> with SingleTickerProviderSt
             SliverAppBar(
               pinned: true,
               expandedHeight: 200,
-              backgroundColor: Colors.black,
-              iconTheme: const IconThemeData(color: Color(0xFFFFD700)),
+              backgroundColor: theme.appBarTheme.backgroundColor,
+              iconTheme: theme.appBarTheme.iconTheme,
               flexibleSpace: FlexibleSpaceBar(
                 title: Text(
                   'Lipton Corner',
                   style: GoogleFonts.poppins(
-                    color: const Color(0xFFFFD700),
+                    color: primaryColor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -93,7 +96,12 @@ class _LiptonScreenState extends State<LiptonScreen> with SingleTickerProviderSt
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.black, Colors.transparent, Colors.black.withOpacity(0.8)],
+                          colors: [
+                            // 🌟 Optimized: Reduced fog opacity
+                            theme.scaffoldBackgroundColor.withValues(alpha: 0.15),
+                            Colors.transparent,
+                            theme.scaffoldBackgroundColor
+                          ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                         ),

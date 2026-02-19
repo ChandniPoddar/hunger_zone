@@ -21,10 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
@@ -40,24 +37,27 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.primaryColor;
+    final textColor = theme.colorScheme.onSurface;
+    
     final authService = Provider.of<AuthService>(context);
     final user = authService.user;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
             pinned: true,
             expandedHeight: 280,
-            backgroundColor: Colors.black,
-            iconTheme: const IconThemeData(color: Color(0xFFFFD700)),
+            backgroundColor: theme.appBarTheme.backgroundColor,
+            iconTheme: theme.appBarTheme.iconTheme,
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Innovative Background Image
                   CachedNetworkImage(
                     imageUrl: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2069&auto=format&fit=crop",
                     fit: BoxFit.cover,
@@ -68,8 +68,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Colors.black.withOpacity(0.3),
-                            Colors.black.withOpacity(0.9),
+                            // 🌟 Optimized: Reduced top opacity to prevent "white fog" look
+                            theme.scaffoldBackgroundColor.withValues(alpha: 0.15),
+                            theme.scaffoldBackgroundColor.withValues(alpha: 0.9),
                           ],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
@@ -88,19 +89,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFFFFD700), width: 3),
+                              border: Border.all(color: primaryColor, width: 3),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFFFFD700).withOpacity(0.3),
+                                  color: primaryColor.withValues(alpha: 0.3),
                                   blurRadius: 20,
                                   spreadRadius: 5,
                                 )
                               ],
                             ),
-                            child: const CircleAvatar(
+                            child: CircleAvatar(
                               radius: 55,
-                              backgroundColor: Color(0xFF1E1E1E),
-                              child: Icon(Icons.person_rounded, size: 70, color: Color(0xFFFFD700)),
+                              backgroundColor: theme.colorScheme.surface,
+                              child: Icon(Icons.person_rounded, size: 70, color: primaryColor),
                             ),
                           ),
                         ),
@@ -108,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         Text(
                           user?.email?.split('@')[0].toUpperCase() ?? "GUEST",
                           style: GoogleFonts.monoton(
-                            color: const Color(0xFFFFD700),
+                            color: primaryColor,
                             fontSize: 24,
                             letterSpacing: 2,
                           ),
@@ -116,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         Text(
                           user?.email ?? "guest@globaleats.com",
                           style: GoogleFonts.poppins(
-                            color: Colors.white70,
+                            color: textColor.withValues(alpha: 0.7),
                             fontSize: 14,
                             fontWeight: FontWeight.w300,
                           ),
@@ -141,18 +142,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       Text(
                         "Account Settings",
                         style: GoogleFonts.poppins(
-                          color: const Color(0xFFFFD700),
+                          color: primaryColor,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 20),
-                      _buildProfileTile(icon: Icons.person_outline_rounded, title: "Personal Details"),
-                      _buildProfileTile(icon: Icons.shopping_bag_outlined, title: "My Orders"),
-                      _buildProfileTile(icon: Icons.favorite_border_rounded, title: "Favorites"),
-                      _buildProfileTile(icon: Icons.location_on_outlined, title: "Shipping Address"),
-                      _buildProfileTile(icon: Icons.payment_rounded, title: "Payment Methods"),
-                      _buildProfileTile(icon: Icons.settings_suggest_outlined, title: "App Settings"),
+                      _buildProfileTile(theme, icon: Icons.person_outline_rounded, title: "Personal Details"),
+                      _buildProfileTile(theme, icon: Icons.shopping_bag_outlined, title: "My Orders"),
+                      _buildProfileTile(theme, icon: Icons.favorite_border_rounded, title: "Favorites"),
+                      _buildProfileTile(theme, icon: Icons.location_on_outlined, title: "Shipping Address"),
+                      _buildProfileTile(theme, icon: Icons.payment_rounded, title: "Payment Methods"),
+                      _buildProfileTile(theme, icon: Icons.settings_suggest_outlined, title: "App Settings"),
                       const SizedBox(height: 40),
                       Center(
                         child: TextButton.icon(
@@ -191,29 +192,39 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildProfileTile({required IconData icon, required String title}) {
+  Widget _buildProfileTile(ThemeData theme, {required IconData icon, required String title}) {
+    final primaryColor = theme.primaryColor;
+    final textColor = theme.colorScheme.onSurface;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
+        color: theme.cardTheme.color,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: textColor.withValues(alpha: 0.05)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFD700).withOpacity(0.1),
+            color: primaryColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: const Color(0xFFFFD700), size: 22),
+          child: Icon(icon, color: primaryColor, size: 22),
         ),
         title: Text(
           title,
-          style: GoogleFonts.poppins(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+          style: GoogleFonts.poppins(color: textColor, fontSize: 16, fontWeight: FontWeight.w500),
         ),
-        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white24),
+        trailing: Icon(Icons.chevron_right_rounded, color: textColor.withValues(alpha: 0.3)),
         onTap: () {},
       ),
     );

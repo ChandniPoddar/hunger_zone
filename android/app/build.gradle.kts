@@ -7,17 +7,14 @@ plugins {
 
 android {
     namespace = "com.example.ggi_canteen"
-    // Updated compileSdk to 36 to resolve plugin dependency requirements
     compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.ggi_canteen"
-        // Set minSdk explicitly to 23 as required by modern Firebase/Razorpay features
         minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        
         multiDexEnabled = true
     }
 

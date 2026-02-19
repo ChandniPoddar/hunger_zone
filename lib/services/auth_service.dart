@@ -31,7 +31,6 @@ class AuthService extends ChangeNotifier {
   Future<void> _checkSessionExpiry() async {
     try {
       final email = user?.email?.toLowerCase();
-      // Only check session expiry for non-hardcoded admin users
       if (email != null && !_adminCredentials.containsKey(email)) {
         final prefs = await SharedPreferences.getInstance();
         final loginTime = prefs.getInt(_sessionKey);
@@ -47,7 +46,6 @@ class AuthService extends ChangeNotifier {
   Future<void> _saveLoginTime() async {
     try {
       final email = user?.email?.toLowerCase();
-      // Only save login time for regular users, not outlet admins
       if (email != null && !_adminCredentials.containsKey(email)) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt(_sessionKey, DateTime.now().millisecondsSinceEpoch);
@@ -106,6 +104,7 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
       final lowEmail = email.toLowerCase().trim();
 
+      // 🌟 OPTIMIZED: Set admin roles BEFORE network calls
       if (_adminCredentials.containsKey(lowEmail) && _adminCredentials[lowEmail]!['pass'] == password) {
         role = 'admin';
         outletName = _adminCredentials[lowEmail]!['outlet'];
@@ -118,12 +117,13 @@ class AuthService extends ChangeNotifier {
         if ((e.code == 'user-not-found' || e.code == 'invalid-credential' || e.code == 'invalid-email') &&
             _adminCredentials.containsKey(lowEmail)) {
           final res = await _autoRegisterAdmin(lowEmail, password);
-          if (res == null) await _saveLoginTime();
+          // No need to save session time for admins
           return res;
         }
         return e.message;
       }
       
+      // 🌟 OPTIMIZED: Skip heavy DB sync for known admins
       if (!_adminCredentials.containsKey(lowEmail)) {
         await _checkUserRole();
       }
@@ -140,17 +140,26 @@ class AuthService extends ChangeNotifier {
     try {
       loading = true;
       notifyListeners();
-      UserCredential result = await _auth.createUserWithEmailAndPassword(email: email, password: password);
-      await _db.collection('users').doc(result.user!.uid).set({
+
+      UserCredential result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      _db.collection('users').doc(result.user!.uid).set({
         'email': email,
         'role': 'user',
         'createdAt': FieldValue.serverTimestamp(),
       });
-      await _saveLoginTime(); 
+
       role = 'user';
+      await _saveLoginTime(); 
+      
       return null;
     } on FirebaseAuthException catch (e) {
       return e.message;
+    } catch(e) {
+      return "An unexpected error occurred.";
     } finally {
       loading = false;
       notifyListeners();
