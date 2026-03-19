@@ -40,9 +40,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     final theme = Theme.of(context);
     final primaryColor = theme.primaryColor;
     final textColor = theme.colorScheme.onSurface;
-    
+
     final authService = Provider.of<AuthService>(context);
-    final user = authService.user;
+    final user = authService.currentUser;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -107,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         ),
                         const SizedBox(height: 15),
                         Text(
-                          user?.email?.split('@')[0].toUpperCase() ?? "GUEST",
+                          user?["email"]?.split('@')[0].toUpperCase() ?? "GUEST",
                           style: GoogleFonts.monoton(
                             color: primaryColor,
                             fontSize: 24,
@@ -115,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           ),
                         ),
                         Text(
-                          user?.email ?? "guest@globaleats.com",
+                          user?["email"] ?? "guest@globaleats.com",
                           style: GoogleFonts.poppins(
                             color: textColor.withValues(alpha: 0.7),
                             fontSize: 14,
@@ -175,7 +175,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(builder: (_) => const LoginScreen()),
-                              (route) => false,
+                                  (route) => false,
                             );
                           },
                         ),

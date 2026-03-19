@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'login_screen.dart';
 import 'admin_login_screen.dart';
+import 'add_item_screen.dart'; // Ensure this import matches your file name
 
 class OperatorUserScreen extends StatefulWidget {
   const OperatorUserScreen({super.key});
@@ -56,13 +57,13 @@ class _OperatorUserScreenState extends State<OperatorUserScreen> with TickerProv
             child: CachedNetworkImage(
               imageUrl: "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=2070&auto=format&fit=crop",
               fit: BoxFit.cover,
-              color: Colors.black.withValues(alpha: 0.6),
+              color: Colors.black.withOpacity(0.6),
               colorBlendMode: BlendMode.darken,
               placeholder: (context, url) => Container(color: Colors.black),
             ),
           ),
 
-          // Decorative Gradient
+          // Decorative Gradient Overlay
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -71,7 +72,7 @@ class _OperatorUserScreenState extends State<OperatorUserScreen> with TickerProv
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withValues(alpha: 0.8),
+                    Colors.black.withOpacity(0.8),
                     Colors.black,
                   ],
                 ),
@@ -85,79 +86,97 @@ class _OperatorUserScreenState extends State<OperatorUserScreen> with TickerProv
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Animated Logo/Icon
-                      ScaleTransition(
-                        scale: _scaleAnimation,
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFFFD700), width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFFFFD700).withValues(alpha: 0.2),
-                                blurRadius: 20,
-                                spreadRadius: 5,
-                              )
-                            ],
+                  child: SingleChildScrollView( // Added scroll view for smaller screens
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Animated Logo/Icon
+                        ScaleTransition(
+                          scale: _scaleAnimation,
+                          child: Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xFFFFD700), width: 2),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFFFD700).withOpacity(0.2),
+                                  blurRadius: 20,
+                                  spreadRadius: 5,
+                                )
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.restaurant_menu_rounded,
+                              size: 80,
+                              color: Color(0xFFFFD700),
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.restaurant_menu_rounded,
-                            size: 80,
-                            color: Color(0xFFFFD700),
+                        ),
+                        const SizedBox(height: 40),
+
+                        Text(
+                          "GLOBAL EATS",
+                          style: GoogleFonts.monoton(
+                            color: const Color(0xFFFFD700),
+                            fontSize: 32,
+                            letterSpacing: 3,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 40),
-                      
-                      Text(
-                        "GLOBAL EATS",
-                        style: GoogleFonts.monoton(
-                          color: const Color(0xFFFFD700),
-                          fontSize: 32,
-                          letterSpacing: 3,
+                        const SizedBox(height: 10),
+                        Text(
+                          "Choose your portal to excellence",
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            color: Colors.white70,
+                            fontSize: 14,
+                            letterSpacing: 1,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        "Choose your portal to excellence",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white70,
-                          fontSize: 14,
-                          letterSpacing: 1,
+                        const SizedBox(height: 60),
+
+                        // 1. User Login Button
+                        _buildAnimatedButton(
+                          title: "LOGIN FOR USER ONLY",
+                          icon: Icons.person_outline_rounded,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            );
+                          },
                         ),
-                      ),
-                      const SizedBox(height: 60),
+                        const SizedBox(height: 25),
 
-                      // User Login Button
-                      _buildAnimatedButton(
-                        title: "LOGIN FOR USER ONLY",
-                        icon: Icons.person_outline_rounded,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const LoginScreen()),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 25),
+                        // 2. Operator Login Button
+                        _buildAnimatedButton(
+                          title: "LOGIN FOR OPERATOR ONLY",
+                          icon: Icons.admin_panel_settings_outlined,
+                          isFilled: true,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 25),
 
-                      // Operator Login Button
-                      _buildAnimatedButton(
-                        title: "LOGIN FOR OPERATOR ONLY",
-                        icon: Icons.admin_panel_settings_outlined,
-                        isOperator: true,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
-                          );
-                        },
-                      ),
-                    ],
+                        // 3. Add New Items Button (Direct Access for Operators)
+                        _buildAnimatedButton(
+                          title: "ADD NEW MENU ITEMS",
+                          icon: Icons.add_to_photos_rounded,
+                          isFilled: false,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const AddItemScreen()),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -172,7 +191,7 @@ class _OperatorUserScreenState extends State<OperatorUserScreen> with TickerProv
     required String title,
     required IconData icon,
     required VoidCallback onTap,
-    bool isOperator = false,
+    bool isFilled = false,
   }) {
     return ScaleTransition(
       scale: _scaleAnimation,
@@ -183,19 +202,19 @@ class _OperatorUserScreenState extends State<OperatorUserScreen> with TickerProv
           height: 65,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: isOperator
+              colors: isFilled
                   ? [const Color(0xFFFFD700), const Color(0xFFB8860B)]
-                  : [Colors.white10, Colors.white.withValues(alpha: 0.05)],
+                  : [Colors.white10, Colors.white.withOpacity(0.05)],
             ),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isOperator ? Colors.transparent : const Color(0xFFFFD700).withValues(alpha: 0.5),
+              color: isFilled ? Colors.transparent : const Color(0xFFFFD700).withOpacity(0.5),
               width: 1.5,
             ),
             boxShadow: [
-              if (isOperator)
+              if (isFilled)
                 BoxShadow(
-                  color: const Color(0xFFFFD700).withValues(alpha: 0.3),
+                  color: const Color(0xFFFFD700).withOpacity(0.3),
                   blurRadius: 15,
                   offset: const Offset(0, 8),
                 )
@@ -206,15 +225,15 @@ class _OperatorUserScreenState extends State<OperatorUserScreen> with TickerProv
             children: [
               Icon(
                 icon,
-                color: isOperator ? Colors.black : const Color(0xFFFFD700),
+                color: isFilled ? Colors.black : const Color(0xFFFFD700),
               ),
               const SizedBox(width: 15),
               Text(
                 title,
                 style: GoogleFonts.poppins(
-                  color: isOperator ? Colors.black : Colors.white,
+                  color: isFilled ? Colors.black : Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 15,
+                  fontSize: 14,
                   letterSpacing: 1,
                 ),
               ),

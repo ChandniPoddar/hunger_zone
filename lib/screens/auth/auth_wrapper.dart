@@ -1,13 +1,15 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class AuthService extends ChangeNotifier {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   bool loading = false;
 
-  // ---------------- CURRENT USER ----------------
-  User? get user => _auth.currentUser;
+  // Change to your backend URL
+  final String baseUrl = "http://10.0.2.2:5000/api";
+
+  Map<String, dynamic>? currentUser;
 
   // ---------------- LOGIN ----------------
   Future<String?> signIn({
@@ -18,13 +20,23 @@ class AuthService extends ChangeNotifier {
       loading = true;
       notifyListeners();
 
-      await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
+      final response = await http.post(
+        Uri.parse("$baseUrl/login"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "email": email,
+          "password": password,
+        }),
       );
-      return null;
-    } on FirebaseAuthException catch (e) {
-      return e.message;
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        currentUser = data["user"];
+        return null;
+      } else {
+        return data["message"];
+      }
     } catch (e) {
       return e.toString();
     } finally {
@@ -42,13 +54,23 @@ class AuthService extends ChangeNotifier {
       loading = true;
       notifyListeners();
 
-      await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
+      final response = await http.post(
+        Uri.parse("$baseUrl/register"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "email": email,
+          "password": password,
+        }),
       );
-      return null;
-    } on FirebaseAuthException catch (e) {
-      return e.message;
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        currentUser = data["user"];
+        return null;
+      } else {
+        return data["message"];
+      }
     } catch (e) {
       return e.toString();
     } finally {
@@ -57,18 +79,12 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // ---------------- PHONE VERIFIED ----------------
-  bool get isPhoneVerified {
-    final u = _auth.currentUser;
-    if (u == null) return false;
-    return u.providerData.any(
-          (provider) => provider.providerId == 'phone',
-    );
-  }
+  // ---------------- CURRENT USER ----------------
+  Map<String, dynamic>? get user => currentUser;
 
   // ---------------- SIGN OUT ----------------
-  Future<void> signOut() async {
-    await _auth.signOut();
+  Future<void> logout() async {
+    currentUser = null;
     notifyListeners();
   }
 }

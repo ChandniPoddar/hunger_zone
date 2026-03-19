@@ -15,6 +15,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
+
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
@@ -22,6 +23,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2000),
@@ -36,21 +38,24 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     _controller.forward();
+
     _navigateNext();
   }
 
   Future<void> _navigateNext() async {
-    // Wait for splash animation/delay
+
     await Future.delayed(const Duration(seconds: 4));
+
     if (!mounted) return;
 
     final auth = Provider.of<AuthService>(context, listen: false);
 
-    // Auto-login logic
-    if (auth.user != null) {
-      final email = auth.user!.email?.toLowerCase();
-      
-      // Hardcoded Admin Emails
+    /// If user logged in
+    if (auth.email != null) {
+
+      final email = auth.email!.toLowerCase();
+
+      /// Hardcoded Admin Emails
       final adminEmails = [
         'nescafe@gmail.com',
         'lipton@gmail.com',
@@ -58,35 +63,49 @@ class _SplashScreenState extends State<SplashScreen>
         'fruit@gmail.com'
       ];
 
-      // 🌟 Correct Logic: Session ONLY applies to regular users.
-      // Admins MUST always re-login when the app restarts.
+      /// Admins must always login again
       if (adminEmails.contains(email)) {
-        await auth.logout(); // Force logout for admins on restart
+
+        await auth.logout();
+
         if (!mounted) return;
+
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const OperatorUserScreen()),
+          MaterialPageRoute(
+            builder: (_) => const OperatorUserScreen(),
+          ),
         );
+
       } else {
-        // Direct navigation to consumer home screen (7-day session applies)
+
+        /// Normal user → go to Home
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          MaterialPageRoute(
+            builder: (_) => const HomeScreen(),
+          ),
         );
+
       }
+
     } else {
-      // No user logged in
+
+      /// Not logged in
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const OperatorUserScreen(),
+          pageBuilder: (context, animation, secondaryAnimation) =>
+          const OperatorUserScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
           transitionDuration: const Duration(milliseconds: 800),
         ),
       );
+
     }
+
   }
 
   @override
@@ -97,27 +116,35 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       backgroundColor: Colors.black,
+
       body: Stack(
         children: [
+
+          /// Background Image
           Positioned.fill(
             child: CachedNetworkImage(
-              imageUrl: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop",
+              imageUrl:
+              "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop",
               fit: BoxFit.cover,
-              placeholder: (context, url) => Container(color: Colors.black),
-              errorWidget: (context, url, error) => Container(color: Colors.black),
+              placeholder: (context, url) =>
+                  Container(color: Colors.black),
+              errorWidget: (context, url, error) =>
+                  Container(color: Colors.black),
             ),
           ),
 
+          /// Dark Gradient Overlay
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.black.withValues(alpha: 0.95),
-                    Colors.black.withValues(alpha: 0.6),
-                    const Color(0xFF0F0F0F).withValues(alpha: 0.9),
+                    Colors.black.withOpacity(0.95),
+                    Colors.black.withOpacity(0.6),
+                    const Color(0xFF0F0F0F).withOpacity(0.9),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -126,43 +153,59 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
 
+          /// Logo + Title
           Center(
             child: FadeTransition(
               opacity: _fadeAnimation,
+
               child: ScaleTransition(
                 scale: _scaleAnimation,
+
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
+
                   children: [
+
+                    /// Logo
                     Container(
                       padding: const EdgeInsets.all(20),
+
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFFFFD700), width: 3),
+                        border: Border.all(
+                          color: const Color(0xFFFFD700),
+                          width: 3,
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFFD700).withOpacity(0.3),
+                            color: const Color(0xFFFFD700)
+                                .withOpacity(0.3),
                             blurRadius: 20,
                             spreadRadius: 5,
                           )
                         ],
                       ),
+
                       child: const Icon(
                         Icons.restaurant_menu_rounded,
                         size: 80,
                         color: Color(0xFFFFD700),
                       ),
                     ),
+
                     const SizedBox(height: 30),
+
+                    /// App Name
                     Text(
                       "GLOBAL EATS",
+
                       style: GoogleFonts.monoton(
                         color: const Color(0xFFFFD700),
                         fontSize: 42,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 4,
-                        shadows: [
-                          const Shadow(
+                        shadows: const [
+                          Shadow(
                             color: Colors.black,
                             offset: Offset(2, 2),
                             blurRadius: 10,
@@ -170,9 +213,13 @@ class _SplashScreenState extends State<SplashScreen>
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 10),
+
+                    /// Tagline
                     Text(
                       "Taste the World, One Plate at a Time",
+
                       style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontSize: 16,
@@ -180,20 +227,28 @@ class _SplashScreenState extends State<SplashScreen>
                         letterSpacing: 1.5,
                       ),
                     ),
+
                     const SizedBox(height: 100),
+
+                    /// Loading
                     const CircularProgressIndicator(
                       color: Color(0xFFFFD700),
                       strokeWidth: 2,
                     ),
+
                     const SizedBox(height: 40),
+
+                    /// Credit
                     Text(
                       "Designed by Chandni",
+
                       style: GoogleFonts.poppins(
                         color: Colors.white54,
                         fontSize: 14,
                         letterSpacing: 1.2,
                       ),
                     ),
+
                   ],
                 ),
               ),
