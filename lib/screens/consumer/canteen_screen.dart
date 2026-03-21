@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -18,12 +20,35 @@ class _CanteenScreenState extends State<CanteenScreen> with SingleTickerProvider
   late AnimationController _controller;
   late Animation<double> _fade;
 
+  List<FoodItem> dynamicItems = [];
+  bool isLoading = true;
+
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
+    fetchItems();
+  }
+
+  Future<void> fetchItems() async {
+    try {
+      final response = await http.get(Uri.parse('http://10.0.2.2:5000/items/canteen'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (mounted) {
+          setState(() {
+            dynamicItems = data.map((item) => FoodItem.fromMap(item['_id'] ?? '', item)).toList();
+            isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -36,16 +61,6 @@ class _CanteenScreenState extends State<CanteenScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.primaryColor;
-
-    final List<FoodItem> canteenItems = [
-      FoodItem(id: 'c1', name: 'Sandwich Plain', category: 'Canteen', description: 'Freshly sliced healthy vegetable sandwich', price: 20, imageUrl: 'assets/images/grill sandwich.jpeg'),
-      FoodItem(id: 'c2', name: 'Sandwich Grilled', category: 'Canteen', description: 'Buttery toasted gourmet grilled sandwich', price: 30, imageUrl: 'assets/images/grill sandwich.jpeg'),
-      FoodItem(id: 'c3', name: 'White Sauce Pasta', category: 'Canteen', description: 'Creamy Italian style white sauce pasta', price: 40, imageUrl: 'assets/images/pasta.jpeg'),
-      FoodItem(id: 'c4', name: 'Noodles (Full)', category: 'Canteen', description: 'Stir-fried street style hakka noodles', price: 60, imageUrl: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?q=80&w=1984&auto=format&fit=crop'),
-      FoodItem(id: 'c6', name: 'Classic Samosa', category: 'Canteen', description: 'Crispy golden fried potato pastry', price: 10, imageUrl: 'assets/images/samosa.jpeg'),
-      FoodItem(id: 'c10', name: 'Bhatura Chana', category: 'Canteen', description: 'Fluffy fried bread with spicy curry', price: 40, imageUrl: 'assets/images/bhatura chana.jpeg'),
-      FoodItem(id: 'c13', name: 'Premium Burger', category: 'Canteen', description: 'Juicy vegetable patty with fresh salad', price: 40, imageUrl: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?q=80&w=2072&auto=format&fit=crop'),
-    ];
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -92,10 +107,14 @@ class _CanteenScreenState extends State<CanteenScreen> with SingleTickerProvider
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.75, mainAxisSpacing: 16, crossAxisSpacing: 16),
-                delegate: SliverChildBuilderDelegate((context, index) => ProductCard(foodItem: canteenItems[index]), childCount: canteenItems.length),
-              ),
+              sliver: isLoading 
+                ? const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()))
+                : dynamicItems.isEmpty
+                    ? const SliverToBoxAdapter(child: Center(child: Text("No items available")))
+                    : SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.75, mainAxisSpacing: 16, crossAxisSpacing: 16),
+                        delegate: SliverChildBuilderDelegate((context, index) => ProductCard(foodItem: dynamicItems[index]), childCount: dynamicItems.length),
+                      ),
             ),
           ],
         ),

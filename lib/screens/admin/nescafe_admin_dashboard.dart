@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
+import '../auth/add_item_screen.dart';
 
 class NescafeAdminDashboard extends StatefulWidget {
   const NescafeAdminDashboard({super.key});
@@ -24,7 +25,7 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard>
   List orders = [];
   bool loading = true;
 
-  final String apiUrl = "http://10.0.2.2:5000/orders";
+  final String apiUrl = "http://10.0.2.2:5000/api/orders/nescafe";
 
   @override
   void initState() {
@@ -59,7 +60,7 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard>
   Future<void> updateOrderStatus(String id, String status) async {
 
     await http.put(
-      Uri.parse("http://10.0.2.2:5000/orders/$id"),
+      Uri.parse("http://10.0.2.2:5000/api/orders/$id/status"),
       headers: {"Content-Type": "application/json"},
       body: json.encode({"status": status}),
     );
@@ -98,6 +99,23 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard>
 
     return Scaffold(
       backgroundColor: Colors.black,
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFFFFD700),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddItemScreen()),
+          );
+        },
+        label: Text(
+          "Add New Item",
+          style: GoogleFonts.poppins(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        icon: const Icon(Icons.add, color: Colors.black),
+      ),
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -329,6 +347,23 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard>
                           style: GoogleFonts.poppins(
                               color: Colors.white60,
                               fontSize: 12)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.person, color: Colors.white38, size: 12),
+                          const SizedBox(width: 4),
+                          Text(order['userName'] ?? 'Guest',
+                              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.email, color: Colors.white38, size: 12),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(order['userEmail'] ?? '',
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

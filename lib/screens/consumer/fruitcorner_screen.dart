@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -18,6 +20,9 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
   late AnimationController _controller;
   late Animation<double> _fade;
 
+  List<FoodItem> dynamicItems = [];
+  bool isLoading = true;
+
   @override
   void initState() {
     super.initState();
@@ -27,6 +32,27 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
     );
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
+    fetchItems();
+  }
+
+  Future<void> fetchItems() async {
+    try {
+      // NOTE: Our backend handles "fruit" param to point to FruitCornerItem
+      final response = await http.get(Uri.parse('http://10.0.2.2:5000/items/fruit'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (mounted) {
+          setState(() {
+            dynamicItems = data.map((item) => FoodItem.fromMap(item['_id'] ?? '', item)).toList();
+            isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -39,14 +65,6 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.primaryColor;
-
-    final List<FoodItem> fruitItems = [
-      FoodItem(id: 'fc1', name: 'Mosambi Juice', category: 'Fruit Corner', description: 'Freshly squeezed premium citrus', price: 50, imageUrl: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=1974&auto=format&fit=crop'),
-      FoodItem(id: 'fc2', name: 'Mix Juice', category: 'Fruit Corner', description: 'Optimal gourmet fruit blend', price: 40, imageUrl: 'https://images.unsplash.com/photo-1622597467827-43b0ef3c9a22?q=80&w=2070&auto=format&fit=crop'),
-      FoodItem(id: 'fc4', name: 'Pomegranate Juice', category: 'Fruit Corner', description: 'Luxury antioxidant ruby juice', price: 120, imageUrl: 'https://images.unsplash.com/photo-1541324904594-66ca8563497b?q=80&w=1974&auto=format&fit=crop'),
-      FoodItem(id: 'fc6', name: 'Banana Shake', category: 'Fruit Corner', description: 'Creamy artisanal banana blend', price: 30, imageUrl: 'https://images.unsplash.com/photo-1528825871115-3581a5387919?q=80&w=2070&auto=format&fit=crop'),
-      FoodItem(id: 'fc7', name: 'Mango Shake', category: 'Fruit Corner', description: 'Velvety king of fruits shake', price: 30, imageUrl: 'https://images.unsplash.com/photo-1537640538966-79f369143f8f?q=80&w=2070&auto=format&fit=crop'),
-    ];
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -115,20 +133,24 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return ProductCard(foodItem: fruitItems[index]);
-                  },
-                  childCount: fruitItems.length,
-                ),
-              ),
+              sliver: isLoading 
+                ? const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()))
+                : dynamicItems.isEmpty
+                    ? const SliverToBoxAdapter(child: Center(child: Text("No items available")))
+                    : SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.75,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            return ProductCard(foodItem: dynamicItems[index]);
+                          },
+                          childCount: dynamicItems.length,
+                        ),
+                      ),
             ),
           ],
         ),

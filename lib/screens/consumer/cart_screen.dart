@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:ggi_canteen/providers/cart_provider.dart';
+import 'package:ggi_canteen/services/auth_service.dart';
 import 'package:provider/provider.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -96,6 +97,7 @@ class _CartScreenState extends State<CartScreen>
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
 
     final cart = context.read<CartProvider>();
+    final auth = context.read<AuthService>();
 
     final items = cart.items.values.map((item) {
       return {
@@ -118,6 +120,8 @@ class _CartScreenState extends State<CartScreen>
         body: jsonEncode({
           "orderId": DateTime.now().millisecondsSinceEpoch.toString(),
           "outlet": widget.outletName ?? "Global Eats",
+          "userName": auth.name ?? "Guest",
+          "userEmail": auth.email ?? "guest@example.com",
           "items": items,
           "total": total,
           "status": "Pending"

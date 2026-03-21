@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
+import '../auth/add_item_screen.dart';
 
 class LiptonAdminDashboard extends StatefulWidget {
   const LiptonAdminDashboard({super.key});
@@ -41,7 +42,7 @@ class _LiptonAdminDashboardState extends State<LiptonAdminDashboard>
   Future<void> fetchOrders() async {
     try {
       final response =
-      await http.get(Uri.parse("http://10.0.2.2:5000/orders/lipton"));
+      await http.get(Uri.parse("http://10.0.2.2:5000/api/orders/lipton"));
 
       if (response.statusCode == 200) {
         setState(() {
@@ -51,6 +52,44 @@ class _LiptonAdminDashboardState extends State<LiptonAdminDashboard>
     } catch (e) {
       debugPrint("Error loading orders: $e");
     }
+  }
+
+  Future<void> updateOrderStatus(String id, String status) async {
+    await http.put(
+      Uri.parse("http://10.0.2.2:5000/api/orders/$id/status"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"status": status}),
+    );
+    fetchOrders();
+  }
+
+  Color getStatusColor(String status) {
+    switch (status) {
+      case "Pending": return Colors.orange;
+      case "Accepted": return Colors.blue;
+      case "Preparing": return Colors.deepPurple;
+      case "Ready": return Colors.teal;
+      case "Completed": return Colors.green;
+      case "Rejected": return Colors.red;
+      default: return Colors.grey;
+    }
+  }
+
+  Widget actionBtn(String text, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: color)),
+        child: Text(text,
+            style: GoogleFonts.poppins(
+                color: color,
+                fontSize: 10,
+                fontWeight: FontWeight.bold)),
+      ),
+    );
   }
 
   @override
@@ -70,6 +109,23 @@ class _LiptonAdminDashboardState extends State<LiptonAdminDashboard>
 
     return Scaffold(
       backgroundColor: Colors.black,
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFFFFD700),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddItemScreen()),
+          );
+        },
+        label: Text(
+          "Add New Item",
+          style: GoogleFonts.poppins(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        icon: const Icon(Icons.add, color: Colors.black),
+      ),
       body: Stack(
         children: [
           Positioned.fill(
@@ -330,6 +386,23 @@ class _LiptonAdminDashboardState extends State<LiptonAdminDashboard>
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
                           color: Colors.white60, fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.person, color: Colors.white38, size: 12),
+                      const SizedBox(width: 4),
+                      Text(order['userName'] ?? 'Guest',
+                          style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.email, color: Colors.white38, size: 12),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(order['userEmail'] ?? '',
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
+                      ),
+                    ],
+                  ),
                 ]),
           ),
           Column(
@@ -340,16 +413,37 @@ class _LiptonAdminDashboardState extends State<LiptonAdminDashboard>
                       color: const Color(0xFFFFD700),
                       fontWeight: FontWeight.bold)),
               Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8)),
-                child: Text(order['status'] ?? "Pending",
-                    style: GoogleFonts.poppins(
-                        color: Colors.orange,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold)),
+                  color: getStatusColor(order['status'] ?? "Pending").withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  order['status'] ?? "Pending",
+                  style: GoogleFonts.poppins(
+                    color: getStatusColor(order['status'] ?? "Pending"),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                alignment: WrapAlignment.end,
+                children: [
+                  if ((order['status'] ?? "Pending") == "Pending")
+                    actionBtn("Accept", Colors.blue, () => updateOrderStatus(order["_id"], "Accepted")),
+                  if ((order['status'] ?? "Pending") == "Pending")
+                    actionBtn("Reject", Colors.red, () => updateOrderStatus(order["_id"], "Rejected")),
+                  if (order['status'] == "Accepted")
+                    actionBtn("Prepare", Colors.deepPurple, () => updateOrderStatus(order["_id"], "Preparing")),
+                  if (order['status'] == "Preparing")
+                    actionBtn("Ready", Colors.teal, () => updateOrderStatus(order["_id"], "Ready")),
+                  if (order['status'] == "Ready")
+                    actionBtn("Complete", Colors.green, () => updateOrderStatus(order["_id"], "Completed")),
+                ],
               ),
             ],
           ),

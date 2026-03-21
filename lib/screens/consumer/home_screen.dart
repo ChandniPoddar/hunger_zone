@@ -14,6 +14,7 @@ import 'canteen_screen.dart';
 import 'lipton_screen.dart';
 import 'fruitcorner_screen.dart';
 import 'nescafe_screen.dart';
+import 'live_track_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -226,6 +227,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           setState(() => _selectedIndex = index);
           if (label == "Profile") {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+          } else if (label == "Live Track") {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveTrackScreen()));
           }
         }
       },

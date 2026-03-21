@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'login_screen.dart';
 import 'admin_login_screen.dart';
-import 'add_item_screen.dart'; // Ensure this import matches your file name
 
 class OperatorUserScreen extends StatefulWidget {
   const OperatorUserScreen({super.key});
@@ -160,21 +159,7 @@ class _OperatorUserScreenState extends State<OperatorUserScreen> with TickerProv
                             );
                           },
                         ),
-                        const SizedBox(height: 25),
-
-                        // 3. Add New Items Button (Direct Access for Operators)
-                        _buildAnimatedButton(
-                          title: "ADD NEW MENU ITEMS",
-                          icon: Icons.add_to_photos_rounded,
-                          isFilled: false,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const AddItemScreen()),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 20),
+                        // 3. (Removed Add New Items Button)
                       ],
                     ),
                   ),

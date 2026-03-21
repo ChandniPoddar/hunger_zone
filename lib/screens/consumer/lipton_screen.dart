@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -18,6 +20,9 @@ class _LiptonScreenState extends State<LiptonScreen> with SingleTickerProviderSt
   late AnimationController _controller;
   late Animation<double> _fade;
 
+  List<FoodItem> dynamicItems = [];
+  bool isLoading = true;
+
   @override
   void initState() {
     super.initState();
@@ -27,6 +32,26 @@ class _LiptonScreenState extends State<LiptonScreen> with SingleTickerProviderSt
     );
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
+    fetchItems();
+  }
+
+  Future<void> fetchItems() async {
+    try {
+      final response = await http.get(Uri.parse('http://10.0.2.2:5000/items/lipton'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (mounted) {
+          setState(() {
+            dynamicItems = data.map((item) => FoodItem.fromMap(item['_id'] ?? '', item)).toList();
+            isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -39,17 +64,6 @@ class _LiptonScreenState extends State<LiptonScreen> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.primaryColor;
-
-    final List<FoodItem> liptonItems = [
-      FoodItem(id: 'l1', name: 'Ice Tea Lemon', category: 'Lipton', description: 'Refreshing lemon ice tea', price: 25, imageUrl: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?q=80&w=1964&auto=format&fit=crop'),
-      FoodItem(id: 'l2', name: 'Ice Tea Peach', category: 'Lipton', description: 'Peach flavored ice tea', price: 25, imageUrl: 'https://images.unsplash.com/photo-1595981267035-7b04ca84a82d?q=80&w=2070&auto=format&fit=crop'),
-      FoodItem(id: 'l3', name: 'Green Tea', category: 'Lipton', description: 'Healthy green tea', price: 20, imageUrl: 'https://images.unsplash.com/photo-1627435601361-ec25f5b1d0e5?q=80&w=2070&auto=format&fit=crop'),
-      FoodItem(id: 'l4', name: 'Honey Green Tea', category: 'Lipton', description: 'Green tea with honey', price: 30, imageUrl: 'https://images.unsplash.com/photo-1597481499750-3e6b22637e12?q=80&w=1974&auto=format&fit=crop'),
-      FoodItem(id: 'l5', name: 'Lemon Green Tea', category: 'Lipton', description: 'Green tea with lemon', price: 30, imageUrl: 'https://images.unsplash.com/photo-1563823245319-d4460bc7bc04?q=80&w=1974&auto=format&fit=crop'),
-      FoodItem(id: 'l6', name: 'Ice Tea Mint', category: 'Lipton', description: 'Cool mint ice tea', price: 25, imageUrl: 'https://images.unsplash.com/photo-1499638673689-79a0b5115d87?q=80&w=1964&auto=format&fit=crop'),
-      FoodItem(id: 'l7', name: 'Classic Black Tea', category: 'Lipton', description: 'Strong black tea', price: 15, imageUrl: 'https://images.unsplash.com/photo-1576091160550-2173bdd99630?q=80&w=2070&auto=format&fit=crop'),
-      FoodItem(id: 'l8', name: 'Masala Tea', category: 'Lipton', description: 'Classic masala tea', price: 15, imageUrl: 'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?q=80&w=2070&auto=format&fit=crop'),
-    ];
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -113,20 +127,24 @@ class _LiptonScreenState extends State<LiptonScreen> with SingleTickerProviderSt
             ),
             SliverPadding(
               padding: const EdgeInsets.all(16),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.7,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    return ProductCard(foodItem: liptonItems[index]);
-                  },
-                  childCount: liptonItems.length,
-                ),
-              ),
+              sliver: isLoading 
+                ? const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()))
+                : dynamicItems.isEmpty
+                    ? const SliverToBoxAdapter(child: Center(child: Text("No items available")))
+                    : SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.7,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            return ProductCard(foodItem: dynamicItems[index]);
+                          },
+                          childCount: dynamicItems.length,
+                        ),
+                      ),
             ),
           ],
         ),

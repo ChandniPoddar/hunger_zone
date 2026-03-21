@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -18,12 +20,35 @@ class _NescafeScreenState extends State<NescafeScreen> with SingleTickerProvider
   late AnimationController _controller;
   late Animation<double> _fade;
 
+  List<FoodItem> dynamicItems = [];
+  bool isLoading = true;
+
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
+    fetchItems();
+  }
+
+  Future<void> fetchItems() async {
+    try {
+      final response = await http.get(Uri.parse('http://10.0.2.2:5000/items/nescafe'));
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        if (mounted) {
+          setState(() {
+            dynamicItems = data.map((item) => FoodItem.fromMap(item['_id'] ?? '', item)).toList();
+            isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => isLoading = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -36,15 +61,6 @@ class _NescafeScreenState extends State<NescafeScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.primaryColor;
-
-    final List<FoodItem> nescafeItems = [
-      FoodItem(id: 'n1', name: 'Nescafe Cappuccino', category: 'Nescafe', description: 'Rich and creamy Italian cappuccino', price: 20, imageUrl: 'https://images.unsplash.com/photo-1534778101976-62847782c213?q=80&w=1974&auto=format&fit=crop'),
-      FoodItem(id: 'n2', name: 'Hot Chocolate', category: 'Nescafe', description: 'Indulgent melted luxury chocolate', price: 20, imageUrl: 'https://images.unsplash.com/photo-1544787210-2213d84ad960?q=80&w=1974&auto=format&fit=crop'),
-      FoodItem(id: 'n3', name: 'Nestea Cardamom', category: 'Nescafe', description: 'Fragrant cardamom infused tea', price: 10, imageUrl: 'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?q=80&w=2070&auto=format&fit=crop'),
-      FoodItem(id: 'n4', name: 'Premium Cold Coffee', category: 'Nescafe', description: 'Chilled artisanal coffee delight', price: 40, imageUrl: 'https://images.unsplash.com/photo-1517701604599-bb29b565090c?q=80&w=1974&auto=format&fit=crop'),
-      FoodItem(id: 'n10', name: 'Gourmet Pasta', category: 'Nescafe', description: 'Exquisite Italian sauced pasta', price: 40, imageUrl: 'https://images.unsplash.com/photo-1645112481338-3562e999f5fa?q=80&w=2070&auto=format&fit=crop'),
-      FoodItem(id: 'n11', name: 'Masala Maggie', category: 'Nescafe', description: 'Traditional spiced masala noodles', price: 30, imageUrl: 'https://images.unsplash.com/photo-1626807893526-285dc342df88?q=80&w=1974&auto=format&fit=crop'),
-    ];
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -78,10 +94,14 @@ class _NescafeScreenState extends State<NescafeScreen> with SingleTickerProvider
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.75, mainAxisSpacing: 16, crossAxisSpacing: 16),
-                delegate: SliverChildBuilderDelegate((context, index) => ProductCard(foodItem: nescafeItems[index]), childCount: nescafeItems.length),
-              ),
+              sliver: isLoading 
+                ? const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()))
+                : dynamicItems.isEmpty
+                    ? const SliverToBoxAdapter(child: Center(child: Text("No items available")))
+                    : SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.75, mainAxisSpacing: 16, crossAxisSpacing: 16),
+                        delegate: SliverChildBuilderDelegate((context, index) => ProductCard(foodItem: dynamicItems[index]), childCount: dynamicItems.length),
+                      ),
             ),
           ],
         ),

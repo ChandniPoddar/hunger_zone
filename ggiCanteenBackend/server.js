@@ -38,6 +38,7 @@ const User = mongoose.model("User", UserSchema);
 // -------------------
 // Routes
 // -------------------
+app.use("/api/orders", require("./routes/orderRoutes"));
 
 // 1. Signup Route (Matched to Flutter AuthService)
 // Flutter calls: http://10.0.2.2:5000/signup
@@ -99,6 +100,7 @@ app.post("/login", async (req, res) => {
   });
 
   //operator -->
+  //operator -->
   // Add this Schema to your server.js
   const ItemSchema = new mongoose.Schema({
     name: { type: String, required: true },
@@ -108,7 +110,12 @@ app.post("/login", async (req, res) => {
     createdAt: { type: Date, default: Date.now }
   });
 
-  const Item = mongoose.model("Item", ItemSchema);
+  // Create separate collections (tables) for different operators
+  const NescafeItem = mongoose.model("NescafeItem", ItemSchema);
+  const LiptonItem = mongoose.model("LiptonItem", ItemSchema);
+  const CanteenItem = mongoose.model("CanteenItem", ItemSchema);
+  const FruitCornerItem = mongoose.model("FruitCornerItem", ItemSchema);
+  const GenericItem = mongoose.model("Item", ItemSchema); // Fallback
 
   // Add this Route to handle adding new items
   app.post("/add-item", async (req, res) => {
@@ -119,12 +126,62 @@ app.post("/login", async (req, res) => {
         return res.status(400).json({ message: "All fields are required" });
       }
 
-      const newItem = new Item({ name, price, category, imageUrl });
+      // Route the insertion to specific collections based on category
+      let TargetModel;
+      switch (category) {
+        case "Nescafe":
+          TargetModel = NescafeItem;
+          break;
+        case "Lipton":
+          TargetModel = LiptonItem;
+          break;
+        case "Canteen":
+          TargetModel = CanteenItem;
+          break;
+        case "Fruit Corner":
+          TargetModel = FruitCornerItem;
+          break;
+        default:
+          TargetModel = GenericItem;
+      }
+
+      const newItem = new TargetModel({ name, price, category, imageUrl });
       await newItem.save();
 
-      res.status(201).json({ message: "Item added successfully!" });
+      res.status(201).json({ message: "Item added successfully to " + TargetModel.modelName });
     } catch (err) {
       res.status(500).json({ message: "Error saving item to database" });
+    }
+  });
+
+  // Get items by category
+  app.get("/items/:category", async (req, res) => {
+    try {
+      const category = req.params.category;
+      let TargetModel;
+
+      switch (category.toLowerCase()) {
+        case "nescafe":
+          TargetModel = NescafeItem;
+          break;
+        case "lipton":
+          TargetModel = LiptonItem;
+          break;
+        case "canteen":
+          TargetModel = CanteenItem;
+          break;
+        case "fruit":
+        case "fruit corner":
+          TargetModel = FruitCornerItem;
+          break;
+        default:
+          TargetModel = GenericItem;
+      }
+
+      const items = await TargetModel.find({});
+      res.status(200).json(items);
+    } catch (err) {
+      res.status(500).json({ message: "Error fetching items" });
     }
   });
 

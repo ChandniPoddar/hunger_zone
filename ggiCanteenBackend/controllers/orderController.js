@@ -29,6 +29,32 @@ exports.getOrders = async (req, res) => {
   }
 };
 
+exports.getOrdersByOutlet = async (req, res) => {
+  try {
+    const { outlet } = req.params;
+    // use case-insensitive matching
+    const orders = await Order.find({ outlet: new RegExp(`^${outlet}$`, 'i') })
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.getOrdersByUser = async (req, res) => {
+  try {
+    const { email } = req.params;
+    // use case-insensitive matching
+    const orders = await Order.find({ userEmail: new RegExp(`^${email}$`, 'i') })
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.updateOrderStatus = async (req, res) => {
   try {
 
