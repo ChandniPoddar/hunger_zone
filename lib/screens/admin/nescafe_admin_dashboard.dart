@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
 import '../auth/add_item_screen.dart';
+import 'manage_items_screen.dart';
 
 class NescafeAdminDashboard extends StatefulWidget {
   const NescafeAdminDashboard({super.key});
@@ -265,7 +266,17 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard>
 
         statCard("Revenue", "₹${revenue.toStringAsFixed(0)}"),
         statCard("Orders", "$totalOrders"),
-        statCard("Queue", "Live"),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ManageItemsScreen(category: 'Nescafe'),
+              ),
+            );
+          },
+          child: statCard("Items", "View"),
+        ),
         statCard("Outlet", "Open"),
 
       ],

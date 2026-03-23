@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
 import '../auth/add_item_screen.dart';
+import 'manage_items_screen.dart';
 
 class LiptonAdminDashboard extends StatefulWidget {
   const LiptonAdminDashboard({super.key});
@@ -286,7 +287,17 @@ class _LiptonAdminDashboardState extends State<LiptonAdminDashboard>
             Icons.account_balance_wallet_outlined),
         _buildStatCard("Total Tea", "$total", Icons.coffee),
         _buildStatCard("Service", "Fast", Icons.speed),
-        _buildStatCard("Customers", "Live", Icons.people),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ManageItemsScreen(category: 'Lipton'),
+              ),
+            );
+          },
+          child: _buildStatCard("Inventory", "Items", Icons.inventory_2_outlined),
+        ),
       ],
     );
   }

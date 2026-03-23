@@ -210,6 +210,37 @@ app.post("/login", async (req, res) => {
     }
   });
 
+  // Delete item by ID
+  app.delete("/item/:category/:id", async (req, res) => {
+    try {
+      const { category, id } = req.params;
+      let TargetModel;
+
+      switch (category.toLowerCase()) {
+        case "nescafe":
+          TargetModel = NescafeItem;
+          break;
+        case "lipton":
+          TargetModel = LiptonItem;
+          break;
+        case "canteen":
+          TargetModel = CanteenItem;
+          break;
+        case "fruit":
+        case "fruit corner":
+          TargetModel = FruitCornerItem;
+          break;
+        default:
+          TargetModel = GenericItem;
+      }
+
+      await TargetModel.findByIdAndDelete(id);
+      res.status(200).json({ message: "Item deleted successfully" });
+    } catch (err) {
+      res.status(500).json({ message: "Error deleting item" });
+    }
+  });
+
 // Test route
 app.get("/", (req, res) => {
   res.send("GGI Canteen Server is running!");

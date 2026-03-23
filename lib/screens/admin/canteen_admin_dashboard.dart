@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
 import '../auth/add_item_screen.dart';
+import 'manage_items_screen.dart';
 
 class CanteenAdminDashboard extends StatefulWidget {
   const CanteenAdminDashboard({super.key});
@@ -314,8 +315,18 @@ class _CanteenAdminDashboardState extends State<CanteenAdminDashboard>
         _buildStatCard("Kitchen", "Busy",
             Icons.fireplace_outlined),
 
-        _buildStatCard("Inventory", "Live",
-            Icons.inventory_2_outlined),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ManageItemsScreen(category: 'Canteen'),
+              ),
+            );
+          },
+          child: _buildStatCard("Inventory", "Items",
+              Icons.inventory_2_outlined),
+        ),
 
       ],
     );

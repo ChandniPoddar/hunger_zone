@@ -9,6 +9,7 @@ import 'package:http/http.dart' as http;
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
 import '../auth/add_item_screen.dart';
+import 'manage_items_screen.dart';
 
 class FruitAdminDashboard extends StatefulWidget {
   const FruitAdminDashboard({super.key});
@@ -271,7 +272,17 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard>
             "Daily Revenue", "₹${revenue.toStringAsFixed(0)}", Icons.payments),
         _buildStatCard("Total Juices", "$total", Icons.local_drink),
         _buildStatCard("Boost", "Active", Icons.health_and_safety),
-        _buildStatCard("Fresh Stock", "Live", Icons.eco),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ManageItemsScreen(category: 'Fruit Corner'),
+              ),
+            );
+          },
+          child: _buildStatCard("Inventory", "Items", Icons.inventory_2_outlined),
+        ),
       ],
     );
   }
