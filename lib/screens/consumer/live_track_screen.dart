@@ -31,7 +31,7 @@ class _LiveTrackScreenState extends State<LiveTrackScreen> {
     }
 
     try {
-      final res = await http.get(Uri.parse("http://10.0.2.2:5000/api/orders/user/$email"));
+      final res = await http.get(Uri.parse("http://172.20.2.13:5000/api/orders/user/$email"));
       if (res.statusCode == 200) {
         if (mounted) {
           setState(() {

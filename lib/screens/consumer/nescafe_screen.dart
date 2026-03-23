@@ -34,7 +34,7 @@ class _NescafeScreenState extends State<NescafeScreen> with SingleTickerProvider
 
   Future<void> fetchItems() async {
     try {
-      final response = await http.get(Uri.parse('http://10.0.2.2:5000/items/nescafe'));
+      final response = await http.get(Uri.parse('http://172.20.2.13:5000/items/nescafe'));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (mounted) {

@@ -38,7 +38,7 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
   Future<void> fetchItems() async {
     try {
       // NOTE: Our backend handles "fruit" param to point to FruitCornerItem
-      final response = await http.get(Uri.parse('http://10.0.2.2:5000/items/fruit'));
+      final response = await http.get(Uri.parse('http://172.20.2.13:5000/items/fruit'));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (mounted) {

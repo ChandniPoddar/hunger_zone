@@ -12,8 +12,8 @@ class AuthService extends ChangeNotifier {
   String? email;
   String? name;
 
-  // Use 10.0.2.2 for Android Emulator, localhost for iOS or Web
-  static const String baseUrl = "http://10.0.2.2:5000";
+  // Use 172.20.2.13 for Android Physical Device
+  static const String baseUrl = "http://172.20.2.13:5000";
   static const String _sessionKey = 'login_timestamp';
   static const int _oneWeekMillis = 7 * 24 * 60 * 60 * 1000;
 

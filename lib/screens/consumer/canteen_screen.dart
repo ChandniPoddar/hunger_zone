@@ -34,7 +34,7 @@ class _CanteenScreenState extends State<CanteenScreen> with SingleTickerProvider
 
   Future<void> fetchItems() async {
     try {
-      final response = await http.get(Uri.parse('http://10.0.2.2:5000/items/canteen'));
+      final response = await http.get(Uri.parse('http://172.20.2.13:5000/items/canteen'));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (mounted) {

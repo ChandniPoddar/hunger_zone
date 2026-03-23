@@ -2,12 +2,32 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
 const app = express();
+
+// Ensure uploads folder exists
+if (!fs.existsSync("./uploads")) {
+  fs.mkdirSync("./uploads");
+}
+
+// Multer settings
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage: storage });
 
 // Middleware
 app.use(express.json());
 app.use(cors());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // -------------------
 // MongoDB Atlas Connection
@@ -118,9 +138,14 @@ app.post("/login", async (req, res) => {
   const GenericItem = mongoose.model("Item", ItemSchema); // Fallback
 
   // Add this Route to handle adding new items
-  app.post("/add-item", async (req, res) => {
+  app.post("/add-item", upload.single("image"), async (req, res) => {
     try {
-      const { name, price, category, imageUrl } = req.body;
+      const { name, price, category } = req.body;
+      let imageUrl = req.body.imageUrl;
+
+      if (req.file) {
+        imageUrl = `http://172.20.2.13:5000/uploads/${req.file.filename}`;
+      }
 
       if (!name || !price || !category || !imageUrl) {
         return res.status(400).json({ message: "All fields are required" });

@@ -9,7 +9,7 @@ class CartProvider with ChangeNotifier {
 
   final Map<String, CartItem> _items = {};
 
-  static const String baseUrl = "http://10.0.2.2:5000";
+  static const String baseUrl = "http://172.20.2.13:5000";
 
   Map<String, CartItem> get items => {..._items};
 

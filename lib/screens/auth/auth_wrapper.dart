@@ -7,7 +7,7 @@ class AuthService extends ChangeNotifier {
   bool loading = false;
 
   // Change to your backend URL
-  final String baseUrl = "http://10.0.2.2:5000/api";
+  final String baseUrl = "http://172.20.2.13:5000/api";
 
   Map<String, dynamic>? currentUser;
 

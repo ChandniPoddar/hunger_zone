@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AddItemScreen extends StatefulWidget {
   const AddItemScreen({super.key});
@@ -14,31 +16,46 @@ class AddItemScreen extends StatefulWidget {
 class _AddItemScreenState extends State<AddItemScreen> {
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
-  final _urlController = TextEditingController();
   String _selectedCategory = 'Nescafe'; // Default
   bool _isLoading = false;
+  File? _selectedImage;
 
   final List<String> _categories = ['Nescafe', 'Lipton', 'Canteen', 'Fruit Corner'];
 
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+      });
+    }
+  }
+
   Future<void> _submitData() async {
-    if (_nameController.text.isEmpty || _priceController.text.isEmpty || _urlController.text.isEmpty) {
-      Fluttertoast.showToast(msg: "Please fill all fields");
+    if (_nameController.text.isEmpty || _priceController.text.isEmpty || _selectedImage == null) {
+      Fluttertoast.showToast(msg: "Please fill all fields and pick an image");
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final response = await http.post(
-        Uri.parse("http://10.0.2.2:5000/add-item"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "name": _nameController.text,
-          "price": double.parse(_priceController.text),
-          "category": _selectedCategory,
-          "imageUrl": _urlController.text,
-        }),
+      var request = http.MultipartRequest(
+        "POST",
+        Uri.parse("http://172.20.2.13:5000/add-item"),
       );
+      
+      request.fields['name'] = _nameController.text;
+      request.fields['price'] = _priceController.text;
+      request.fields['category'] = _selectedCategory;
+      
+      request.files.add(
+        await http.MultipartFile.fromPath('image', _selectedImage!.path),
+      );
+
+      final streamResponse = await request.send();
+      final response = await http.Response.fromStream(streamResponse);
 
       if (response.statusCode == 201) {
         Fluttertoast.showToast(msg: "Item Added Successfully!");
@@ -70,7 +87,32 @@ class _AddItemScreenState extends State<AddItemScreen> {
             const SizedBox(height: 20),
             _buildInput("Price (₹)", _priceController, Icons.currency_rupee, keyboardType: TextInputType.number),
             const SizedBox(height: 20),
-            _buildInput("Image URL", _urlController, Icons.image),
+            
+            GestureDetector(
+              onTap: _pickImage,
+              child: Container(
+                height: 150,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white10,
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: const Color(0xFFFFD700).withOpacity(0.3)),
+                ),
+                child: _selectedImage == null
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_photo_alternate, size: 50, color: const Color(0xFFFFD700).withOpacity(0.7)),
+                          const SizedBox(height: 10),
+                          const Text("Tap to Pick Image", style: TextStyle(color: Colors.white70)),
+                        ],
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(15),
+                        child: Image.file(_selectedImage!, fit: BoxFit.cover),
+                      ),
+              ),
+            ),
             const SizedBox(height: 20),
 
             // Category Dropdown

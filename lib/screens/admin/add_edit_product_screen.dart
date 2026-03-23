@@ -28,7 +28,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   bool _isAvailable = true;
 
   /// CHANGE THIS TO YOUR NODE SERVER
-  final String baseUrl = "http://10.0.2.2:5000/products";
+  final String baseUrl = "http://172.20.2.13:5000/products";
 
   final List<String> _categories = [
     'Nescafe',

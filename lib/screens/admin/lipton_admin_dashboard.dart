@@ -42,7 +42,7 @@ class _LiptonAdminDashboardState extends State<LiptonAdminDashboard>
   Future<void> fetchOrders() async {
     try {
       final response =
-      await http.get(Uri.parse("http://10.0.2.2:5000/api/orders/lipton"));
+      await http.get(Uri.parse("http://172.20.2.13:5000/api/orders/lipton"));
 
       if (response.statusCode == 200) {
         setState(() {
@@ -56,7 +56,7 @@ class _LiptonAdminDashboardState extends State<LiptonAdminDashboard>
 
   Future<void> updateOrderStatus(String id, String status) async {
     await http.put(
-      Uri.parse("http://10.0.2.2:5000/api/orders/$id/status"),
+      Uri.parse("http://172.20.2.13:5000/api/orders/$id/status"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({"status": status}),
     );

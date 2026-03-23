@@ -25,7 +25,7 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard>
   List orders = [];
   bool loading = true;
 
-  final String apiUrl = "http://10.0.2.2:5000/api/orders/nescafe";
+  final String apiUrl = "http://172.20.2.13:5000/api/orders/nescafe";
 
   @override
   void initState() {
@@ -60,7 +60,7 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard>
   Future<void> updateOrderStatus(String id, String status) async {
 
     await http.put(
-      Uri.parse("http://10.0.2.2:5000/api/orders/$id/status"),
+      Uri.parse("http://172.20.2.13:5000/api/orders/$id/status"),
       headers: {"Content-Type": "application/json"},
       body: json.encode({"status": status}),
     );

@@ -26,7 +26,7 @@ class _CanteenAdminDashboardState extends State<CanteenAdminDashboard>
   bool loading = true;
 
   /// CHANGE IF USING REAL DEVICE
-  final String apiUrl = "http://10.0.2.2:5000/api/orders/canteen";
+  final String apiUrl = "http://172.20.2.13:5000/api/orders/canteen";
 
   @override
   void initState() {
@@ -62,7 +62,7 @@ class _CanteenAdminDashboardState extends State<CanteenAdminDashboard>
 
   Future<void> updateOrderStatus(String id, String status) async {
     await http.put(
-      Uri.parse("http://10.0.2.2:5000/api/orders/$id/status"),
+      Uri.parse("http://172.20.2.13:5000/api/orders/$id/status"),
       headers: {"Content-Type": "application/json"},
       body: json.encode({"status": status}),
     );

@@ -28,7 +28,7 @@ class _CartScreenState extends State<CartScreen>
 
   final String razorpayKey = 'rzp_test_SAodWBg2uq2dkh';
 
-  final String apiUrl = "http://10.0.2.2:5000/api/orders";
+  final String apiUrl = "http://172.20.2.13:5000/api/orders";
 
   @override
   void initState() {
