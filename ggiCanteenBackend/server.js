@@ -1,11 +1,14 @@
-require('dotenv').config({ path: '../.env' });
+const fs = require('fs');
+const path = require('path');
+if (fs.existsSync('.env')) {
+  require('dotenv').config();
+} else if (fs.existsSync('../.env')) {
+  require('dotenv').config({ path: '../.env' });
+}
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-
 const app = express();
 
 // Ensure uploads folder exists

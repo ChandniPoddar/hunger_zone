@@ -39,7 +39,7 @@ class MyApp extends StatelessWidget {
             ],
             child: MaterialApp(
               debugShowCheckedModeBanner: false,
-              title: 'Global Eats',
+              title: 'Hunger Zone',
               themeMode: themeProvider.themeMode,
 
               // -------- LIGHT THEME --------
