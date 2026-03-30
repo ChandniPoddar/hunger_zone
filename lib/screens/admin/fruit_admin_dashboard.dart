@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
+import 'package:ggi_canteen/utils/constants.dart';
 
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
@@ -43,7 +44,7 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard>
   Future<void> fetchOrders() async {
     try {
       final response =
-      await http.get(Uri.parse("http://172.20.2.13:5000/api/orders/fruit"));
+      await http.get(Uri.parse("${AppConstants.baseUrl}/api/orders/fruit"));
 
       if (response.statusCode == 200) {
         setState(() {
@@ -57,7 +58,7 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard>
 
   Future<void> updateOrderStatus(String id, String status) async {
     await http.put(
-      Uri.parse("http://172.20.2.13:5000/api/orders/$id/status"),
+      Uri.parse("${AppConstants.baseUrl}/api/orders/$id/status"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({"status": status}),
     );

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:ggi_canteen/utils/constants.dart';
 import '../../models/food_item.dart';
 
 class AddEditProductScreen extends StatefulWidget {
@@ -27,8 +28,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   bool _isLoading = false;
   bool _isAvailable = true;
 
-  /// CHANGE THIS TO YOUR NODE SERVER
-  final String baseUrl = "http://172.20.2.13:5000/products";
+  final String baseUrl = "${AppConstants.baseUrl}/products";
 
   final List<String> _categories = [
     'Nescafe',

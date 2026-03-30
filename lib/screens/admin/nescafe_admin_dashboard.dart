@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
+import 'package:ggi_canteen/utils/constants.dart';
 
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
@@ -26,7 +27,7 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard>
   List orders = [];
   bool loading = true;
 
-  final String apiUrl = "http://172.20.2.13:5000/api/orders/nescafe";
+  final String apiUrl = "${AppConstants.baseUrl}/api/orders/nescafe";
 
   @override
   void initState() {
@@ -61,7 +62,7 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard>
   Future<void> updateOrderStatus(String id, String status) async {
 
     await http.put(
-      Uri.parse("http://172.20.2.13:5000/api/orders/$id/status"),
+      Uri.parse("${AppConstants.baseUrl}/api/orders/$id/status"),
       headers: {"Content-Type": "application/json"},
       body: json.encode({"status": status}),
     );

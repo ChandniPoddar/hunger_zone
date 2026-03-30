@@ -1,13 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:ggi_canteen/utils/constants.dart';
 
 class AuthService extends ChangeNotifier {
 
   bool loading = false;
 
   // Change to your backend URL
-  final String baseUrl = "http://172.20.2.13:5000/api";
+  final String baseUrl = "${AppConstants.baseUrl}/api";
 
   Map<String, dynamic>? currentUser;
 

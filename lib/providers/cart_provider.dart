@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:ggi_canteen/utils/constants.dart';
 
 import 'package:ggi_canteen/models/cart_item.dart';
 import 'package:ggi_canteen/models/food_item.dart';
@@ -9,7 +10,7 @@ class CartProvider with ChangeNotifier {
 
   final Map<String, CartItem> _items = {};
 
-  static const String baseUrl = "http://172.20.2.13:5000";
+  static final String baseUrl = AppConstants.baseUrl;
 
   Map<String, CartItem> get items => {..._items};
 

@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
+import 'package:ggi_canteen/utils/constants.dart';
 
 class CartScreen extends StatefulWidget {
   final String? outletName;
@@ -26,9 +27,9 @@ class _CartScreenState extends State<CartScreen>
   late AnimationController _controller;
   late Animation<double> _fade;
 
-  final String razorpayKey = 'rzp_test_SAodWBg2uq2dkh';
+  final String razorpayKey = AppConstants.razorpayKey;
 
-  final String apiUrl = "http://172.20.2.13:5000/api/orders";
+  final String apiUrl = "${AppConstants.baseUrl}/api/orders";
 
   @override
   void initState() {
@@ -79,8 +80,8 @@ class _CartScreenState extends State<CartScreen>
       'name': widget.outletName ?? 'Global Eats',
       'description': 'Payment for Order',
       'prefill': {
-        'contact': '9876543210',
-        'email': 'user@globaleats.com'
+        'contact': AppConstants.defaultContact,
+        'email': AppConstants.defaultEmail
       },
       'external': {
         'wallets': ['paytm']

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../models/food_item.dart';
 import '../../widgets/product_card.dart';
 import '../../providers/cart_provider.dart';
+import 'package:ggi_canteen/utils/constants.dart';
 import 'cart_screen.dart';
 
 class LiptonScreen extends StatefulWidget {
@@ -37,7 +38,7 @@ class _LiptonScreenState extends State<LiptonScreen> with SingleTickerProviderSt
 
   Future<void> fetchItems() async {
     try {
-      final response = await http.get(Uri.parse('http://172.20.2.13:5000/items/lipton'));
+      final response = await http.get(Uri.parse('${AppConstants.baseUrl}/items/lipton'));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (mounted) {

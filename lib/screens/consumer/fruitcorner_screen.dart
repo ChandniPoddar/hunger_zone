@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:ggi_canteen/models/food_item.dart';
 import '../../widgets/product_card.dart';
 import '../../providers/cart_provider.dart';
+import 'package:ggi_canteen/utils/constants.dart';
 import 'cart_screen.dart';
 
 class FruitCornerScreen extends StatefulWidget {
@@ -38,7 +39,7 @@ class _FruitCornerScreenState extends State<FruitCornerScreen> with SingleTicker
   Future<void> fetchItems() async {
     try {
       // NOTE: Our backend handles "fruit" param to point to FruitCornerItem
-      final response = await http.get(Uri.parse('http://172.20.2.13:5000/items/fruit'));
+      final response = await http.get(Uri.parse('${AppConstants.baseUrl}/items/fruit'));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (mounted) {

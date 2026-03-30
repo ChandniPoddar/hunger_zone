@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:ggi_canteen/utils/constants.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -43,7 +44,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
     try {
       var request = http.MultipartRequest(
         "POST",
-        Uri.parse("http://172.20.2.13:5000/add-item"),
+        Uri.parse("${AppConstants.baseUrl}/add-item"),
       );
       
       request.fields['name'] = _nameController.text;

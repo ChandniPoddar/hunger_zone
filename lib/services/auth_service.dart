@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ggi_canteen/utils/constants.dart';
 
 class AuthService extends ChangeNotifier {
   bool _loading = false;
@@ -12,8 +13,8 @@ class AuthService extends ChangeNotifier {
   String? email;
   String? name;
 
-  // Use 172.20.2.13 for Android Physical Device
-  static const String baseUrl = "http://172.20.2.13:5000";
+  // Use AppConstants.baseUrl for the API
+  static final String baseUrl = AppConstants.baseUrl;
   static const String _sessionKey = 'login_timestamp';
   static const int _oneWeekMillis = 7 * 24 * 60 * 60 * 1000;
 

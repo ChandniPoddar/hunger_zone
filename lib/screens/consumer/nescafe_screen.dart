@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:ggi_canteen/models/food_item.dart';
 import '../../widgets/product_card.dart';
 import '../../providers/cart_provider.dart';
+import 'package:ggi_canteen/utils/constants.dart';
 import 'cart_screen.dart';
 
 class NescafeScreen extends StatefulWidget {
@@ -34,7 +35,7 @@ class _NescafeScreenState extends State<NescafeScreen> with SingleTickerProvider
 
   Future<void> fetchItems() async {
     try {
-      final response = await http.get(Uri.parse('http://172.20.2.13:5000/items/nescafe'));
+      final response = await http.get(Uri.parse('${AppConstants.baseUrl}/items/nescafe'));
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         if (mounted) {

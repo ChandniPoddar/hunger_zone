@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:ggi_canteen/utils/constants.dart';
 import '../../services/auth_service.dart';
 
 class LiveTrackScreen extends StatefulWidget {
@@ -31,7 +32,7 @@ class _LiveTrackScreenState extends State<LiveTrackScreen> {
     }
 
     try {
-      final res = await http.get(Uri.parse("http://172.20.2.13:5000/api/orders/user/$email"));
+      final res = await http.get(Uri.parse("${AppConstants.baseUrl}/api/orders/user/$email"));
       if (res.statusCode == 200) {
         if (mounted) {
           setState(() {

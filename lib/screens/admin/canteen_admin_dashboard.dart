@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
+import 'package:ggi_canteen/utils/constants.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
 import '../auth/add_item_screen.dart';
@@ -26,8 +27,7 @@ class _CanteenAdminDashboardState extends State<CanteenAdminDashboard>
   List orders = [];
   bool loading = true;
 
-  /// CHANGE IF USING REAL DEVICE
-  final String apiUrl = "http://172.20.2.13:5000/api/orders/canteen";
+  final String apiUrl = "${AppConstants.baseUrl}/api/orders/canteen";
 
   @override
   void initState() {
@@ -63,7 +63,7 @@ class _CanteenAdminDashboardState extends State<CanteenAdminDashboard>
 
   Future<void> updateOrderStatus(String id, String status) async {
     await http.put(
-      Uri.parse("http://172.20.2.13:5000/api/orders/$id/status"),
+      Uri.parse("${AppConstants.baseUrl}/api/orders/$id/status"),
       headers: {"Content-Type": "application/json"},
       body: json.encode({"status": status}),
     );

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:ggi_canteen/utils/constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class ManageItemsScreen extends StatefulWidget {
@@ -25,7 +26,7 @@ class _ManageItemsScreenState extends State<ManageItemsScreen> {
 
   Future<void> fetchItems() async {
     try {
-      final response = await http.get(Uri.parse("http://172.20.2.13:5000/items/${widget.category}"));
+      final response = await http.get(Uri.parse("${AppConstants.baseUrl}/items/${widget.category}"));
       
       if (response.statusCode == 200) {
         setState(() {
@@ -69,7 +70,7 @@ class _ManageItemsScreenState extends State<ManageItemsScreen> {
 
     setState(() => isLoading = true);
     try {
-      final response = await http.delete(Uri.parse("http://172.20.2.13:5000/item/${widget.category}/$id"));
+      final response = await http.delete(Uri.parse("${AppConstants.baseUrl}/item/${widget.category}/$id"));
       if (response.statusCode == 200) {
         fetchItems();
       } else {
