@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:ggi_canteen/utils/constants.dart';
+import 'package:hunger_zone/utils/constants.dart';
 import '../../models/food_item.dart';
 
 class AddEditProductScreen extends StatefulWidget {

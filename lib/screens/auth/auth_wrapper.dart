@@ -1,91 +1,49 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:ggi_canteen/utils/constants.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_service.dart';
+import '../consumer/home_screen.dart';
+import 'login_screen.dart';
+import 'operator_user.dart';
+import '../admin/canteen_admin_dashboard.dart';
+import '../admin/nescafe_admin_dashboard.dart';
+import '../admin/lipton_admin_dashboard.dart';
+import '../admin/fruit_admin_dashboard.dart';
 
-class AuthService extends ChangeNotifier {
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
 
-  bool loading = false;
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthService>();
 
-  // Change to your backend URL
-  final String baseUrl = "${AppConstants.baseUrl}/api";
-
-  Map<String, dynamic>? currentUser;
-
-  // ---------------- LOGIN ----------------
-  Future<String?> signIn({
-    required String email,
-    required String password,
-  }) async {
-    try {
-      loading = true;
-      notifyListeners();
-
-      final response = await http.post(
-        Uri.parse("$baseUrl/login"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "email": email,
-          "password": password,
-        }),
+    if (auth.loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
       );
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        currentUser = data["user"];
-        return null;
-      } else {
-        return data["message"];
-      }
-    } catch (e) {
-      return e.toString();
-    } finally {
-      loading = false;
-      notifyListeners();
     }
-  }
 
-  // ---------------- SIGNUP ----------------
-  Future<String?> signUp({
-    required String email,
-    required String password,
-  }) async {
-    try {
-      loading = true;
-      notifyListeners();
-
-      final response = await http.post(
-        Uri.parse("$baseUrl/register"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "email": email,
-          "password": password,
-        }),
-      );
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200) {
-        currentUser = data["user"];
-        return null;
-      } else {
-        return data["message"];
-      }
-    } catch (e) {
-      return e.toString();
-    } finally {
-      loading = false;
-      notifyListeners();
+    if (auth.phoneNumber == null) {
+      return const LoginScreen();
     }
-  }
 
-  // ---------------- CURRENT USER ----------------
-  Map<String, dynamic>? get user => currentUser;
-
-  // ---------------- SIGN OUT ----------------
-  Future<void> logout() async {
-    currentUser = null;
-    notifyListeners();
+    // Role-based routing
+    if (auth.isAdmin) {
+      switch (auth.outletName) {
+        case 'Nescafe':
+          return const NescafeAdminDashboard();
+        case 'Lipton':
+          return const LiptonAdminDashboard();
+        case 'Canteen':
+          return const CanteenAdminDashboard();
+        case 'Fruit Corner':
+          return const FruitAdminDashboard();
+        default:
+          return const CanteenAdminDashboard();
+      }
+    } else if (auth.role == 'operator') {
+      return const OperatorUserScreen();
+    } else {
+      return const HomeScreen();
+    }
   }
 }

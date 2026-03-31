@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
-import 'package:ggi_canteen/models/food_item.dart';
+import 'package:hunger_zone/models/food_item.dart';
 import '../../widgets/product_card.dart';
 import '../../providers/cart_provider.dart';
-import 'package:ggi_canteen/utils/constants.dart';
+import 'package:hunger_zone/utils/constants.dart';
 import 'cart_screen.dart';
 
 class FruitCornerScreen extends StatefulWidget {

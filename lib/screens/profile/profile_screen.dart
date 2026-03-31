@@ -107,7 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         ),
                         const SizedBox(height: 15),
                         Text(
-                          user?["email"]?.split('@')[0].toUpperCase() ?? "GUEST",
+                          user?["name"]?.toUpperCase() ?? "GUEST",
                           style: GoogleFonts.monoton(
                             color: primaryColor,
                             fontSize: 24,
@@ -115,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           ),
                         ),
                         Text(
-                          user?["email"] ?? "guest@globaleats.com",
+                          user?["phoneNumber"] ?? "0000000000",
                           style: GoogleFonts.poppins(
                             color: textColor.withValues(alpha: 0.7),
                             fontSize: 14,

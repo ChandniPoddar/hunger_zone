@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:ggi_canteen/utils/constants.dart';
+import 'package:hunger_zone/utils/constants.dart';
 
-import 'package:ggi_canteen/models/cart_item.dart';
-import 'package:ggi_canteen/models/food_item.dart';
+import 'package:hunger_zone/models/cart_item.dart';
+import 'package:hunger_zone/models/food_item.dart';
 
 class CartProvider with ChangeNotifier {
 
@@ -117,7 +117,7 @@ class CartProvider with ChangeNotifier {
   }
 
   Future<String?> placeOrder({
-    required String customerEmail,
+    required String customerPhone,
     String? specificOutlet,
   }) async {
 
@@ -165,7 +165,7 @@ class CartProvider with ChangeNotifier {
           headers: {"Content-Type": "application/json"},
           body: jsonEncode({
             "orderId": orderId,
-            "customerEmail": customerEmail,
+            "userPhone": customerPhone,
             "outlet": outlet,
             "items": itemList.map((i) => {
               "name": i.foodItem.name,

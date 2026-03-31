@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import '../../models/food_item.dart';
 import '../../widgets/product_card.dart';
 import '../../providers/cart_provider.dart';
-import 'package:ggi_canteen/utils/constants.dart';
+import 'package:hunger_zone/utils/constants.dart';
 import 'cart_screen.dart';
 
 class LiptonScreen extends StatefulWidget {

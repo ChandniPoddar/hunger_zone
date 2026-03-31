@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ggi_canteen/utils/constants.dart';
+import 'package:hunger_zone/utils/constants.dart';
 
 class AuthService extends ChangeNotifier {
   bool _loading = false;
@@ -10,8 +10,9 @@ class AuthService extends ChangeNotifier {
 
   String? role;
   String? outletName;
-  String? email;
+  String? phoneNumber;
   String? name;
+  DateTime? lastVerified;
 
   // Use AppConstants.baseUrl for the API
   static final String baseUrl = AppConstants.baseUrl;
@@ -24,21 +25,21 @@ class AuthService extends ChangeNotifier {
 
   /// ✅ USER OBJECT FOR PROFILE SCREEN
   Map<String, dynamic>? get currentUser {
-    if (email == null) return null;
+    if (phoneNumber == null) return null;
     return {
       "name": name,
-      "email": email,
+      "phoneNumber": phoneNumber,
       "role": role,
       "outletName": outletName,
     };
   }
 
-  /// ADMIN LOGIN SHORTCUTS
+  /// ADMIN LOGIN SHORTCUTS (Updated to Phone Numbers)
   final Map<String, Map<String, String>> _adminCredentials = {
-    'nescafe@gmail.com': {'pass': 'nescafe123', 'outlet': 'Nescafe'},
-    'lipton@gmail.com': {'pass': 'lipton123', 'outlet': 'Lipton'},
-    'canteen@gmail.com': {'pass': 'canteen123', 'outlet': 'Canteen'},
-    'fruit@gmail.com': {'pass': 'fruit123', 'outlet': 'Fruit Corner'},
+    '9876543210': {'pass': 'nescafe123', 'outlet': 'Nescafe'},
+    '9876543211': {'pass': 'lipton123', 'outlet': 'Lipton'},
+    '9876543212': {'pass': 'canteen123', 'outlet': 'Canteen'},
+    '9876543213': {'pass': 'fruit123', 'outlet': 'Fruit Corner'},
   };
 
   bool get isAdmin => role == 'admin' || role?.startsWith('admin_') == true;
@@ -55,26 +56,69 @@ class AuthService extends ChangeNotifier {
       final loginTime = prefs.getInt(_sessionKey);
 
       if (loginTime != null) {
-        if (DateTime.now().millisecondsSinceEpoch - loginTime > _oneWeekMillis) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        
+        // 1. Weekly check for everyone
+        if (now - loginTime > _oneWeekMillis) {
           await logout();
+          return;
+        }
+
+        // 2. Daily check for Operators
+        if (role == 'operator') {
+          final lastVerifStr = prefs.getString('last_verified_at');
+          if (lastVerifStr != null) {
+            final lastVerif = DateTime.parse(lastVerifStr);
+            if (DateTime.now().difference(lastVerif).inHours >= 24) {
+              // Need re-verification
+              // Note: Usually we'd redirect to a verification screen. 
+              // For now, we'll force logout or set a flag.
+              await logout();
+            }
+          } else {
+            await logout();
+          }
         }
       }
     } catch (_) {}
   }
 
-  Future<void> _saveLoginTime() async {
+  Future<void> _saveLoginData(Map<String, dynamic> data) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_sessionKey, DateTime.now().millisecondsSinceEpoch);
+      if (data['lastVerified'] != null) {
+        await prefs.setString('last_verified_at', data['lastVerified']);
+      }
     } catch (_) {}
   }
 
-  /// ✅ UPDATED SIGN UP (Supports MongoDB Schema)
+  /// ✅ REQUEST OTP
+  Future<String?> requestOtp(String phone) async {
+    try {
+      setLoading(true);
+      final response = await http.post(
+        Uri.parse("$baseUrl/request-otp"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"phoneNumber": phone}),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) return null;
+      return data["message"] ?? "Failed to send OTP";
+    } catch (e) {
+      return "Connection error";
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /// ✅ SIGN UP
   Future<String?> signUp({
     required String name,
-    required String email,
+    required String phoneNumber,
     required String password,
     required String role,
+    required String otp,
   }) async {
     try {
       setLoading(true);
@@ -84,21 +128,22 @@ class AuthService extends ChangeNotifier {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "name": name,
-          "email": email.toLowerCase().trim(),
+          "phoneNumber": phoneNumber,
           "password": password,
           "role": role,
+          "otp": otp,
         }),
       );
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        this.email = email.toLowerCase().trim();
+        this.phoneNumber = phoneNumber;
         this.name = name;
         this.role = data["role"] ?? role;
 
-        await _saveLoginTime();
-        return null; // Success
+        await _saveLoginData(data);
+        return null;
       } else {
         return data["message"] ?? "Signup failed";
       }
@@ -111,20 +156,19 @@ class AuthService extends ChangeNotifier {
 
   /// ✅ SIGN IN
   Future<String?> signIn({
-    required String email,
+    required String phoneNumber,
     required String password,
   }) async {
     try {
       setLoading(true);
-      final lowEmail = email.toLowerCase().trim();
 
       /// 1. Check Admin Shortcuts first
-      if (_adminCredentials.containsKey(lowEmail) &&
-          _adminCredentials[lowEmail]!['pass'] == password) {
+      if (_adminCredentials.containsKey(phoneNumber) &&
+          _adminCredentials[phoneNumber]!['pass'] == password) {
         this.role = "admin";
-        this.outletName = _adminCredentials[lowEmail]!['outlet'];
-        this.email = lowEmail;
-        await _saveLoginTime();
+        this.outletName = _adminCredentials[phoneNumber]!['outlet'];
+        this.phoneNumber = phoneNumber;
+        await _saveLoginData({'lastVerified': DateTime.now().toIso8601String()});
         return null;
       }
 
@@ -133,7 +177,7 @@ class AuthService extends ChangeNotifier {
         Uri.parse("$baseUrl/login"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "email": lowEmail,
+          "phoneNumber": phoneNumber,
           "password": password,
         }),
       );
@@ -144,15 +188,40 @@ class AuthService extends ChangeNotifier {
         this.role = data["role"] ?? "user";
         this.name = data["name"];
         this.outletName = data["outletName"];
-        this.email = lowEmail;
+        this.phoneNumber = phoneNumber;
 
-        await _saveLoginTime();
+        await _saveLoginData(data);
         return null;
       } else {
         return data["message"] ?? "Login failed";
       }
     } catch (e) {
       return "Server connection failed";
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /// ✅ DAILY VERIFY
+  Future<String?> dailyVerify(String otp) async {
+    try {
+      setLoading(true);
+      final response = await http.post(
+        Uri.parse("$baseUrl/daily-verify"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "phoneNumber": phoneNumber,
+          "otp": otp,
+        }),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        await _saveLoginData(data);
+        return null;
+      }
+      return data["message"] ?? "Verification failed";
+    } catch (e) {
+      return "Connection error";
     } finally {
       setLoading(false);
     }
@@ -167,8 +236,9 @@ class AuthService extends ChangeNotifier {
 
     role = null;
     outletName = null;
-    email = null;
+    phoneNumber = null;
     name = null;
+    lastVerified = null;
 
     notifyListeners();
   }

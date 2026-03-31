@@ -18,7 +18,7 @@ class AdminLoginScreen extends StatefulWidget {
 }
 
 class _AdminLoginScreenState extends State<AdminLoginScreen> with SingleTickerProviderStateMixin {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
@@ -44,21 +44,21 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with SingleTickerPr
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _controller.dispose();
     super.dispose();
   }
 
-  void _navigateToDashboard(String email) {
+  void _navigateToDashboard(String phone) {
     Widget dashboard;
-    if (email == 'nescafe@gmail.com') {
+    if (phone == '9876543210') {
       dashboard = const NescafeAdminDashboard();
-    } else if (email == 'lipton@gmail.com') {
+    } else if (phone == '9876543211') {
       dashboard = const LiptonAdminDashboard();
-    } else if (email == 'canteen@gmail.com') {
+    } else if (phone == '9876543212') {
       dashboard = const CanteenAdminDashboard();
-    } else if (email == 'fruit@gmail.com') {
+    } else if (phone == '9876543213') {
       dashboard = const FruitAdminDashboard();
     } else {
       return;
@@ -158,9 +158,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with SingleTickerPr
 
                         // Input Fields
                         _buildTextField(
-                          controller: _emailController,
-                          hint: "Admin Email",
-                          icon: Icons.alternate_email_rounded,
+                          controller: _phoneController,
+                          hint: "Admin Phone",
+                          icon: Icons.phone_android_rounded,
                         ),
                         const SizedBox(height: 20),
                         _buildTextField(
@@ -193,15 +193,15 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with SingleTickerPr
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                                   ),
                                   onPressed: () async {
-                                    final email = _emailController.text.trim().toLowerCase();
+                                    final phone = _phoneController.text.trim();
                                     final password = _passwordController.text.trim();
 
-                                    if (email.isEmpty || password.isEmpty) {
+                                    if (phone.isEmpty || password.isEmpty) {
                                       Fluttertoast.showToast(msg: "Please fill all fields");
                                       return;
                                     }
 
-                                    final msg = await auth.signIn(email: email, password: password);
+                                    final msg = await auth.signIn(phoneNumber: phone, password: password);
 
                                     if (msg != null) {
                                       Fluttertoast.showToast(msg: msg);
@@ -209,14 +209,14 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with SingleTickerPr
                                       if (!mounted) return;
                                       
                                       final admins = [
-                                        'nescafe@gmail.com',
-                                        'lipton@gmail.com',
-                                        'canteen@gmail.com',
-                                        'fruit@gmail.com'
+                                        '9876543210',
+                                        '9876543211',
+                                        '9876543212',
+                                        '9876543213'
                                       ];
 
-                                      if (admins.contains(email)) {
-                                        _navigateToDashboard(email);
+                                      if (admins.contains(phone)) {
+                                        _navigateToDashboard(phone);
                                       } else {
                                         Fluttertoast.showToast(msg: "Unauthorized admin access");
                                         await auth.logout();

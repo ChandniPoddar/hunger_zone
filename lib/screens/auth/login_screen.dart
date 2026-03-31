@@ -22,7 +22,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
@@ -45,24 +45,23 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _controller.dispose();
     super.dispose();
   }
 
-  /// Handles routing for Admin Emails
-  void _navigateToCorrectAdminDashboard(String email) {
+  /// Handles routing for Admin Phone Numbers
+  void _navigateToCorrectAdminDashboard(String phone) {
     Widget dashboard;
-    final lowEmail = email.toLowerCase();
 
-    if (lowEmail == 'nescafe@gmail.com') {
+    if (phone == '9876543210') {
       dashboard = const NescafeAdminDashboard();
-    } else if (lowEmail == 'lipton@gmail.com') {
+    } else if (phone == '9876543211') {
       dashboard = const LiptonAdminDashboard();
-    } else if (lowEmail == 'canteen@gmail.com') {
+    } else if (phone == '9876543212') {
       dashboard = const CanteenAdminDashboard();
-    } else if (lowEmail == 'fruit@gmail.com') {
+    } else if (phone == '9876543213') {
       dashboard = const FruitAdminDashboard();
     } else {
       dashboard = const HomeScreen();
@@ -127,9 +126,10 @@ class _LoginScreenState extends State<LoginScreen>
                         const SizedBox(height: 40),
 
                         _buildTextField(
-                          controller: _emailController,
-                          hint: "Email",
-                          icon: Icons.email_rounded,
+                          controller: _phoneController,
+                          hint: "Phone Number",
+                          icon: Icons.phone_android_rounded,
+                          keyboardType: TextInputType.phone,
                         ),
                         const SizedBox(height: 20),
                         _buildTextField(
@@ -156,15 +156,15 @@ class _LoginScreenState extends State<LoginScreen>
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                             ),
                             onPressed: () async {
-                              final email = _emailController.text.trim();
+                              final phone = _phoneController.text.trim();
                               final password = _passwordController.text.trim();
 
-                              if (email.isEmpty || password.isEmpty) {
+                              if (phone.isEmpty || password.isEmpty) {
                                 Fluttertoast.showToast(msg: "Please fill all fields");
                                 return;
                               }
 
-                              final errorMsg = await auth.signIn(email: email, password: password);
+                              final errorMsg = await auth.signIn(phoneNumber: phone, password: password);
 
                               if (errorMsg != null) {
                                 Fluttertoast.showToast(msg: errorMsg);
@@ -175,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                               // ✅ ROLE-BASED NAVIGATION
                               if (auth.isAdmin) {
-                                _navigateToCorrectAdminDashboard(email);
+                                _navigateToCorrectAdminDashboard(phone);
                               } else if (auth.role == 'operator') {
                                 Navigator.pushReplacement(
                                   context,
@@ -220,6 +220,7 @@ class _LoginScreenState extends State<LoginScreen>
     required String hint,
     required IconData icon,
     bool obscure = false,
+    TextInputType keyboardType = TextInputType.text,
     Widget? suffix,
   }) {
     return Container(
@@ -231,6 +232,7 @@ class _LoginScreenState extends State<LoginScreen>
       child: TextField(
         controller: controller,
         obscureText: obscure,
+        keyboardType: keyboardType,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),

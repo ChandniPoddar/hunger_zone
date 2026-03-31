@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
-import 'package:ggi_canteen/utils/constants.dart';
+import 'package:hunger_zone/utils/constants.dart';
 
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
@@ -367,10 +367,10 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard>
                           Text(order['userName'] ?? 'Guest',
                               style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
                           const SizedBox(width: 8),
-                          const Icon(Icons.email, color: Colors.white38, size: 12),
+                          const Icon(Icons.phone, color: Colors.white38, size: 12),
                           const SizedBox(width: 4),
                           Expanded(
-                            child: Text(order['userEmail'] ?? '',
+                            child: Text(order['userPhone'] ?? '',
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
                           ),

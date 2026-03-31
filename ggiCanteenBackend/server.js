@@ -50,10 +50,11 @@ mongoose
 // -------------------
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
+  phoneNumber: { type: String, required: true, unique: true }, // Replaced email with phoneNumber
   password: { type: String, required: true },
   role: { type: String, default: "user" },
-  outletName: { type: String, default: null } // Useful for admins/operators
+  outletName: { type: String, default: null }, // Useful for admins/operators
+  lastVerified: { type: Date, default: Date.now } // Track daily verification for operators
 });
 
 const User = mongoose.model("User", UserSchema);
@@ -63,36 +64,60 @@ const User = mongoose.model("User", UserSchema);
 // -------------------
 app.use("/api/orders", require("./routes/orderRoutes"));
 
-// 1. Signup Route (Matched to Flutter AuthService)
-// Flutter calls: http://10.0.2.2:5000/signup
+// Simplified OTP Store (Use Redis/Session in production)
+const otpStore = {};
+
+// 1a. Request OTP
+app.post("/request-otp", async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+    if (!phoneNumber) return res.status(400).json({ message: "Phone number required" });
+
+    const otp = "123456"; // MOCK OTP
+    otpStore[phoneNumber] = { otp, expires: Date.now() + 300000 }; // 5 mins
+    
+    console.log(`OTP for ${phoneNumber}: ${otp}`);
+    res.status(200).json({ message: "OTP sent successfully", otp }); // In real app, don't return otp
+  } catch (err) {
+    res.status(500).json({ message: "Error sending OTP" });
+  }
+});
+
+// 1b. Signup Route (Updated for Phone Number)
 app.post("/signup", async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, phoneNumber, password, role, otp } = req.body;
 
-    if (!email || !password || !name) {
+    if (!phoneNumber || !password || !name || !otp) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    // Verify OTP
+    if (!otpStore[phoneNumber] || otpStore[phoneNumber].otp !== otp) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+    delete otpStore[phoneNumber];
+
+    const existingUser = await User.findOne({ phoneNumber });
     if (existingUser) {
-      return res.status(400).json({ message: "Email already registered" });
+      return res.status(400).json({ message: "Phone number already registered" });
     }
 
     const user = new User({
       name,
-      email: email.toLowerCase(),
-      password, // Note: In production, use bcrypt to hash this!
+      phoneNumber,
+      password, // Note: In production, use bcrypt!
       role: role || "user"
     });
 
     await user.save();
-    console.log(`User created: ${email}`);
+    console.log(`User created: ${phoneNumber}`);
 
-    // Return the user data so Flutter can update state
     res.status(201).json({
       message: "User created successfully",
       role: user.role,
-      name: user.name
+      name: user.name,
+      phoneNumber: user.phoneNumber
     });
   } catch (err) {
     console.error("Error creating user:", err);
@@ -100,25 +125,52 @@ app.post("/signup", async (req, res) => {
   }
 });
 
-// 2. Login Route (Matched to Flutter AuthService)
+// 2. Login Route (Updated for Phone Number)
 app.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { phoneNumber, password } = req.body;
 
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ phoneNumber });
 
     if (!user || user.password !== password) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid phone number or password" });
     }
 
     res.status(200).json({
-      email: user.email,
+      phoneNumber: user.phoneNumber,
       role: user.role,
       name: user.name,
-      outletName: user.outletName
+      outletName: user.outletName,
+      lastVerified: user.lastVerified
     });
   } catch (err) {
     res.status(500).json({ message: "Server error during login" });
+  }
+});
+
+// 3. Daily Verification Route
+app.post("/daily-verify", async (req, res) => {
+  try {
+    const { phoneNumber, otp } = req.body;
+    if (!phoneNumber || !otp) return res.status(400).json({ message: "Missing fields" });
+
+    // Verify OTP
+    if (!otpStore[phoneNumber] || otpStore[phoneNumber].otp !== otp) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+    delete otpStore[phoneNumber];
+
+    const user = await User.findOneAndUpdate(
+      { phoneNumber },
+      { lastVerified: new Date() },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ message: "Daily verification successful", lastVerified: user.lastVerified });
+  } catch (err) {
+    res.status(500).json({ message: "Verification failed" });
   }
 });
 

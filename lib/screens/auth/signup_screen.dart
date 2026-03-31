@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../services/auth_service.dart';
+import 'otp_screen.dart';
 // Note: HomeScreen and OperatorUserScreen imports can stay if you use them elsewhere,
 // but for the "Navigate to Login" requirement, we will use Navigator.pop or pushReplacement.
 
@@ -18,7 +19,7 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
@@ -42,7 +43,7 @@ class _SignupScreenState extends State<SignupScreen>
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _controller.dispose();
     super.dispose();
@@ -111,9 +112,10 @@ class _SignupScreenState extends State<SignupScreen>
                         ),
                         const SizedBox(height: 20),
                         _buildTextField(
-                          controller: _emailController,
-                          hint: "Email",
-                          icon: Icons.email_rounded,
+                          controller: _phoneController,
+                          hint: "Phone Number",
+                          icon: Icons.phone_android_rounded,
+                          keyboardType: TextInputType.phone,
                         ),
                         const SizedBox(height: 20),
                         _buildTextField(
@@ -139,35 +141,34 @@ class _SignupScreenState extends State<SignupScreen>
                             ),
                             onPressed: () async {
                               final name = _nameController.text.trim();
-                              final email = _emailController.text.trim();
+                              final phone = _phoneController.text.trim();
                               final password = _passwordController.text.trim();
 
-                              if (name.isEmpty || email.isEmpty || password.isEmpty) {
+                              if (name.isEmpty || phone.isEmpty || password.isEmpty) {
                                 Fluttertoast.showToast(msg: "Please fill all fields");
                                 return;
                               }
 
-                              // This calls your Node.js/MongoDB backend via AuthService
-                              final String? error = await auth.signUp(
-                                name: name,
-                                email: email,
-                                password: password,
-                                role: 'user', // default role
-                              );
+                              // Request OTP first
+                              final String? error = await auth.requestOtp(phone);
 
                               if (error == null && mounted) {
-                                // SUCCESS: Data is stored in MongoDB
-                                Fluttertoast.showToast(
-                                    msg: "Account created successfully! Please Login.",
-                                    backgroundColor: Colors.green,
-                                    textColor: Colors.white
+                                Fluttertoast.showToast(msg: "OTP sent to $phone");
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => OTPScreen(
+                                      phone: phone,
+                                      isSignup: true,
+                                      signupData: {
+                                        'name': name,
+                                        'password': password,
+                                        'role': 'user',
+                                      },
+                                    ),
+                                  ),
                                 );
-
-                                // ✅ NAVIGATE TO LOGIN PAGE
-                                // Since Signup is usually pushed from Login, we pop to go back.
-                                Navigator.pop(context);
                               } else if (error != null) {
-                                // FAILURE
                                 Fluttertoast.showToast(msg: error);
                               }
                             },
@@ -202,6 +203,7 @@ class _SignupScreenState extends State<SignupScreen>
     required String hint,
     required IconData icon,
     bool obscure = false,
+    TextInputType keyboardType = TextInputType.text,
     Widget? suffix,
   }) {
     return Container(
@@ -213,6 +215,7 @@ class _SignupScreenState extends State<SignupScreen>
       child: TextField(
         controller: controller,
         obscureText: obscure,
+        keyboardType: keyboardType,
         style: const TextStyle(color: Colors.white),
         decoration: InputDecoration(
           contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),

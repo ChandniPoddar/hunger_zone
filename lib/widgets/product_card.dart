@@ -1,8 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:ggi_canteen/models/food_item.dart';
-import 'package:ggi_canteen/providers/cart_provider.dart';
+import 'package:hunger_zone/models/food_item.dart';
+import 'package:hunger_zone/providers/cart_provider.dart';
 import 'package:provider/provider.dart';
 
 class ProductCard extends StatelessWidget {

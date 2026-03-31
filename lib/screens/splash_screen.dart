@@ -51,44 +51,33 @@ class _SplashScreenState extends State<SplashScreen>
     final auth = Provider.of<AuthService>(context, listen: false);
 
     /// If user logged in
-    if (auth.email != null) {
+    if (auth.phoneNumber != null) {
 
-      final email = auth.email!.toLowerCase();
+      final phone = auth.phoneNumber!;
 
-      /// Hardcoded Admin Emails
-      final adminEmails = [
-        'nescafe@gmail.com',
-        'lipton@gmail.com',
-        'canteen@gmail.com',
-        'fruit@gmail.com'
+      /// Hardcoded Admin Phone Numbers
+      final adminPhones = [
+        '9876543210',
+        '9876543211',
+        '9876543212',
+        '9876543213'
       ];
 
       /// Admins must always login again
-      if (adminEmails.contains(email)) {
-
+      if (adminPhones.contains(phone)) {
         await auth.logout();
-
         if (!mounted) return;
-
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => const OperatorUserScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => const OperatorUserScreen()),
         );
-
       } else {
-
         /// Normal user → go to Home
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => const HomeScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
         );
-
       }
-
     } else {
 
       /// Not logged in

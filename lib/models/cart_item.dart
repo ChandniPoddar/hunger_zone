@@ -1,4 +1,4 @@
-import 'package:ggi_canteen/models/food_item.dart';
+import 'package:hunger_zone/models/food_item.dart';
 
 class CartItem {
   final String id;

@@ -1,13 +1,13 @@
 class UserModel {
   final String id;
   final String name;
-  final String email;
+  final String phoneNumber;
   final String role;
 
   UserModel({
     required this.id,
     required this.name,
-    required this.email,
+    required this.phoneNumber,
     required this.role,
   });
 
@@ -16,7 +16,7 @@ class UserModel {
     return UserModel(
       id: json['_id'], // MongoDB uses _id
       name: json['name'],
-      email: json['email'],
+      phoneNumber: json['phoneNumber'],
       role: json['role'],
     );
   }
@@ -24,7 +24,7 @@ class UserModel {
   Map<String, dynamic> toJson() {
     return {
       'name': name,
-      'email': email,
+      'phoneNumber': phoneNumber,
       'role': role,
     };
   }

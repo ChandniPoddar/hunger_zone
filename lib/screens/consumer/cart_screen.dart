@@ -1,15 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:ggi_canteen/providers/cart_provider.dart';
-import 'package:ggi_canteen/services/auth_service.dart';
+import 'package:hunger_zone/providers/cart_provider.dart';
+import 'package:hunger_zone/services/auth_service.dart';
 import 'package:provider/provider.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
-import 'package:ggi_canteen/utils/constants.dart';
+import 'package:hunger_zone/utils/constants.dart';
 
 class CartScreen extends StatefulWidget {
   final String? outletName;
@@ -122,7 +122,7 @@ class _CartScreenState extends State<CartScreen>
           "orderId": DateTime.now().millisecondsSinceEpoch.toString(),
           "outlet": widget.outletName ?? "Global Eats",
           "userName": auth.name ?? "Guest",
-          "userEmail": auth.email ?? "guest@example.com",
+          "userPhone": auth.phoneNumber ?? "0000000000",
           "items": items,
           "total": total,
           "status": "Pending"
