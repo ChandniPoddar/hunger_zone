@@ -64,7 +64,20 @@ const User = mongoose.model("User", UserSchema);
 // -------------------
 app.use("/api/orders", require("./routes/orderRoutes"));
 
-// Simplified OTP Store (Use Redis/Session in production)
+// -------------------
+// SMS Configuration (Twilio)
+// -------------------
+const twilio = require('twilio');
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+
+let client;
+if (accountSid && authToken) {
+  client = twilio(accountSid, authToken);
+}
+
+// Simplified OTP Store
 const otpStore = {};
 
 // 1a. Request OTP
@@ -73,13 +86,32 @@ app.post("/request-otp", async (req, res) => {
     const { phoneNumber } = req.body;
     if (!phoneNumber) return res.status(400).json({ message: "Phone number required" });
 
-    const otp = "123456"; // MOCK OTP
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
     otpStore[phoneNumber] = { otp, expires: Date.now() + 300000 }; // 5 mins
     
-    console.log(`OTP for ${phoneNumber}: ${otp}`);
-    res.status(200).json({ message: "OTP sent successfully", otp }); // In real app, don't return otp
+    console.log(`Generating OTP for ${phoneNumber}: ${otp}`);
+
+    if (client && twilioPhone) {
+      try {
+        await client.messages.create({
+          body: `Your Hunger Zone verification code is ${otp}`,
+          from: twilioPhone,
+          to: phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}` // Assuming India if no prefix
+        });
+        console.log(`Real SMS sent to ${phoneNumber}`);
+        return res.status(200).json({ message: "OTP sent successfully via SMS" });
+      } catch (err) {
+        console.error("Twilio error:", err);
+        return res.status(500).json({ message: "Error sending SMS. Please check Twilio setup." });
+      }
+    } else {
+      console.log(`Mock OTP (use this for testing): ${otp}`);
+      return res.status(200).json({ message: "OTP sent successfully (Mock)", otp }); 
+    }
   } catch (err) {
-    res.status(500).json({ message: "Error sending OTP" });
+    console.error("Request OTP error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
