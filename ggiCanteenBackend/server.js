@@ -102,8 +102,13 @@ app.post("/request-otp", async (req, res) => {
         console.log(`Real SMS sent to ${phoneNumber}`);
         return res.status(200).json({ message: "OTP sent successfully via SMS" });
       } catch (err) {
-        console.error("Twilio error:", err);
-        return res.status(500).json({ message: "Error sending SMS. Please check Twilio setup." });
+        console.error("Twilio error full object:", JSON.stringify(err, null, 2));
+        console.error("Twilio error message:", err.message);
+        return res.status(500).json({ 
+          message: "Error sending SMS. Please check Twilio setup.",
+          error: err.message,
+          code: err.code 
+        });
       }
     } else {
       console.log(`Mock OTP (use this for testing): ${otp}`);

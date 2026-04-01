@@ -104,7 +104,12 @@ class AuthService extends ChangeNotifier {
       );
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) return null;
-      return data["message"] ?? "Failed to send OTP";
+      
+      String msg = data["message"] ?? "Failed to send OTP";
+      if (data["error"] != null) {
+        msg = "$msg\nDetails: ${data["error"]}";
+      }
+      return msg;
     } catch (e) {
       return "Connection error";
     } finally {

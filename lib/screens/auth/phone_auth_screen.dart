@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-
+import 'package:provider/provider.dart';
+import '../../services/auth_service.dart';
 import 'otp_screen.dart';
 
 class PhoneAuthScreen extends StatefulWidget {
@@ -84,12 +85,8 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen>
     });
 
     try {
-
-      /// TODO: Call your backend API here
-      /// Example:
-      /// await ApiService.sendOtp(fullPhone);
-
-      await Future.delayed(const Duration(seconds: 1));
+      final auth = context.read<AuthService>();
+      final String? error = await auth.requestOtp(fullPhone);
 
       if (!mounted) return;
 
@@ -97,15 +94,19 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen>
         isLoading = false;
       });
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OTPScreen(
-            phone: fullPhone,
+      if (error == null) {
+        Fluttertoast.showToast(msg: "OTP sent to $fullPhone");
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => OTPScreen(
+              phone: fullPhone,
+            ),
           ),
-        ),
-      );
-
+        );
+      } else {
+        Fluttertoast.showToast(msg: error);
+      }
     } catch (e) {
 
       if (!mounted) return;
