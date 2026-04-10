@@ -158,7 +158,7 @@ app.post("/signup", async (req, res) => {
     });
   } catch (err) {
     console.error("Error creating user:", err);
-    res.status(500).json({ message: "Server error during signup" });
+    res.status(500).json({ message: "Server error during signup", error: err.message });
   }
 });
 

@@ -11,7 +11,7 @@ const {
 
 router.post("/", createOrder);
 router.get("/", getOrders);
-router.get("/user/:email", getOrdersByUser);
+router.get("/user/:phone", getOrdersByUser);
 router.get("/:outlet", getOrdersByOutlet);
 router.put("/:id/status", updateOrderStatus);
 

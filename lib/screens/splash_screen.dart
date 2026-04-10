@@ -5,6 +5,10 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import 'auth/operator_user.dart';
 import 'consumer/home_screen.dart';
+import 'admin/nescafe_admin_dashboard.dart';
+import 'admin/lipton_admin_dashboard.dart';
+import 'admin/canteen_admin_dashboard.dart';
+import 'admin/fruit_admin_dashboard.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -43,44 +47,41 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigateNext() async {
+    final auth = Provider.of<AuthService>(context, listen: false);
 
-    await Future.delayed(const Duration(seconds: 4));
+    // Wait for BOTH the visual splash delay and the async session restore simultaneously.
+    final results = await Future.wait([
+      Future.delayed(const Duration(seconds: 4)),
+      auth.restoreSession(),
+    ]);
 
     if (!mounted) return;
 
-    final auth = Provider.of<AuthService>(context, listen: false);
+    final bool hasValidSession = results[1] as bool;
 
-    /// If user logged in
-    if (auth.phoneNumber != null) {
-
-      final phone = auth.phoneNumber!;
-
-      /// Hardcoded Admin Phone Numbers
-      final adminPhones = [
-        '9876543210',
-        '9876543211',
-        '9876543212',
-        '9876543213'
-      ];
-
-      /// Admins must always login again
-      if (adminPhones.contains(phone)) {
-        await auth.logout();
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const OperatorUserScreen()),
-        );
+    if (hasValidSession && auth.phoneNumber != null) {
+      
+      if (auth.isAdmin || auth.role == 'operator') {
+        // Determine exact dashboard for admins
+        if (auth.phoneNumber == '9876543210') {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const NescafeAdminDashboard()));
+        } else if (auth.phoneNumber == '9876543211') {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LiptonAdminDashboard()));
+        } else if (auth.phoneNumber == '9876543212') {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const CanteenAdminDashboard()));
+        } else if (auth.phoneNumber == '9876543213') {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FruitAdminDashboard()));
+        } else {
+          // If a generic operator somehow exists
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const OperatorUserScreen()));
+        }
       } else {
-        /// Normal user → go to Home
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
+        // Normal User Home
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
       }
-    } else {
 
-      /// Not logged in
+    } else {
+      /// Not logged in or expired session => Go to Login Chooser Gateway
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
@@ -92,9 +93,7 @@ class _SplashScreenState extends State<SplashScreen>
           transitionDuration: const Duration(milliseconds: 800),
         ),
       );
-
     }
-
   }
 
   @override

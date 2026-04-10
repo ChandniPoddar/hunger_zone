@@ -19,9 +19,7 @@ class AuthService extends ChangeNotifier {
   static const String _sessionKey = 'login_timestamp';
   static const int _oneWeekMillis = 7 * 24 * 60 * 60 * 1000;
 
-  AuthService() {
-    _checkSessionExpiry();
-  }
+  AuthService(); // Removed automatic constructor call
 
   /// ✅ USER OBJECT FOR PROFILE SCREEN
   Map<String, dynamic>? get currentUser {
@@ -49,8 +47,8 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// SESSION EXPIRY CHECK
-  Future<void> _checkSessionExpiry() async {
+  /// SESSION RESTORE & EXPIRY CHECK (1 WEEK PERSISTENT)
+  Future<bool> restoreSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final loginTime = prefs.getInt(_sessionKey);
@@ -58,11 +56,17 @@ class AuthService extends ChangeNotifier {
       if (loginTime != null) {
         final now = DateTime.now().millisecondsSinceEpoch;
         
-        // 1. Weekly check for everyone
+        // 1. Weekly check for everyone (1 week = 7 days)
         if (now - loginTime > _oneWeekMillis) {
           await logout();
-          return;
+          return false;
         }
+
+        // Restore in-memory variables First
+        role = prefs.getString('role');
+        phoneNumber = prefs.getString('phoneNumber');
+        name = prefs.getString('name');
+        outletName = prefs.getString('outletName');
 
         // 2. Daily check for Operators
         if (role == 'operator') {
@@ -70,17 +74,26 @@ class AuthService extends ChangeNotifier {
           if (lastVerifStr != null) {
             final lastVerif = DateTime.parse(lastVerifStr);
             if (DateTime.now().difference(lastVerif).inHours >= 24) {
-              // Need re-verification
-              // Note: Usually we'd redirect to a verification screen. 
-              // For now, we'll force logout or set a flag.
               await logout();
+              return false; // Force re-verification
             }
           } else {
             await logout();
+            return false;
           }
+        }
+
+        // If made it here, session is fully valid
+        if (role != null && phoneNumber != null) {
+           notifyListeners();
+           return true; 
+        } else {
+           await logout();
+           return false;
         }
       }
     } catch (_) {}
+    return false;
   }
 
   Future<void> _saveLoginData(Map<String, dynamic> data) async {
@@ -90,6 +103,11 @@ class AuthService extends ChangeNotifier {
       if (data['lastVerified'] != null) {
         await prefs.setString('last_verified_at', data['lastVerified']);
       }
+      
+      if (role != null) await prefs.setString('role', role!);
+      if (phoneNumber != null) await prefs.setString('phoneNumber', phoneNumber!);
+      if (name != null) await prefs.setString('name', name!);
+      if (outletName != null) await prefs.setString('outletName', outletName!);
     } catch (_) {}
   }
 
@@ -150,7 +168,11 @@ class AuthService extends ChangeNotifier {
         await _saveLoginData(data);
         return null;
       } else {
-        return data["message"] ?? "Signup failed";
+        String msg = data["message"] ?? "Signup failed";
+        if (data["error"] != null) {
+          msg = "$msg: ${data["error"]}";
+        }
+        return msg;
       }
     } catch (e) {
       return "Server connection failed: $e";
@@ -237,6 +259,11 @@ class AuthService extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_sessionKey);
+      await prefs.remove('role');
+      await prefs.remove('phoneNumber');
+      await prefs.remove('name');
+      await prefs.remove('outletName');
+      await prefs.remove('last_verified_at');
     } catch (_) {}
 
     role = null;
