@@ -1,14 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import 'package:hunger_zone/models/food_item.dart';
-import '../../widgets/product_card.dart';
-import '../../providers/cart_provider.dart';
 import 'package:hunger_zone/utils/constants.dart';
-import 'cart_screen.dart';
+import '../../providers/outlet_provider.dart';
+import '../../widgets/outlet_view.dart';
 
 class CanteenScreen extends StatefulWidget {
   const CanteenScreen({super.key});
@@ -17,19 +14,13 @@ class CanteenScreen extends StatefulWidget {
   State<CanteenScreen> createState() => _CanteenScreenState();
 }
 
-class _CanteenScreenState extends State<CanteenScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fade;
-
+class _CanteenScreenState extends State<CanteenScreen> {
   List<FoodItem> dynamicItems = [];
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _controller.forward();
     fetchItems();
   }
 
@@ -53,73 +44,18 @@ class _CanteenScreenState extends State<CanteenScreen> with SingleTickerProvider
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primaryColor = theme.primaryColor;
-
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      floatingActionButton: Consumer<CartProvider>(
-        builder: (context, cart, _) {
-          final canteenCount = cart.items.values.where((item) => item.foodItem.category == 'Canteen').length;
-          if (canteenCount == 0) return const SizedBox.shrink();
-          return FloatingActionButton.extended(
-            backgroundColor: primaryColor,
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen(outletName: 'Canteen'))),
-            icon: Icon(Icons.shopping_basket_rounded, color: theme.brightness == Brightness.dark ? Colors.black : Colors.white),
-            label: Text('Canteen Cart (\$canteenCount)', style: GoogleFonts.poppins(color: theme.brightness == Brightness.dark ? Colors.black : Colors.white, fontWeight: FontWeight.bold)),
-          );
-        },
-      ),
-      body: FadeTransition(
-        opacity: _fade,
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverAppBar(
-              pinned: true, expandedHeight: 250, backgroundColor: theme.appBarTheme.backgroundColor, iconTheme: theme.appBarTheme.iconTheme,
-              flexibleSpace: FlexibleSpaceBar(
-                centerTitle: true,
-                title: Text('GLOBAL CANTEEN', style: GoogleFonts.monoton(color: primaryColor, fontSize: 18, letterSpacing: 2)),
-                background: Stack(fit: StackFit.expand, children: [
-                  Image.asset('assets/images/canteen.jpeg', fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey[900], child: Icon(Icons.restaurant, color: primaryColor, size: 50))),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          // 🌟 Optimized: Reduced fog opacity
-                          theme.scaffoldBackgroundColor.withValues(alpha: 0.15),
-                          Colors.transparent,
-                          theme.scaffoldBackgroundColor
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                    ),
-                  ),
-                ]),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
-              sliver: isLoading 
-                ? const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()))
-                : dynamicItems.isEmpty
-                    ? const SliverToBoxAdapter(child: Center(child: Text("No items available")))
-                    : SliverGrid(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.75, mainAxisSpacing: 16, crossAxisSpacing: 16),
-                        delegate: SliverChildBuilderDelegate((context, index) => ProductCard(foodItem: dynamicItems[index]), childCount: dynamicItems.length),
-                      ),
-            ),
-          ],
-        ),
-      ),
+    return Consumer<OutletProvider>(
+      builder: (context, outletProvider, child) {
+        bool isOpen = outletProvider.isOpen('Canteen');
+        return OutletView(
+          title: 'Canteen',
+          items: dynamicItems,
+          isLoading: isLoading,
+          isOpen: isOpen,
+        );
+      },
     );
   }
 }
+

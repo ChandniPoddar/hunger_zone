@@ -30,14 +30,14 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 1000),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeIn),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
 
@@ -104,23 +104,18 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: Colors.black,
-
       body: Stack(
         children: [
-
           /// Background Image
           Positioned.fill(
             child: CachedNetworkImage(
               imageUrl:
               "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop",
               fit: BoxFit.cover,
-              placeholder: (context, url) =>
-                  Container(color: Colors.black),
-              errorWidget: (context, url, error) =>
-                  Container(color: Colors.black),
+              placeholder: (context, url) => Container(color: Colors.black),
+              errorWidget: (context, url, error) => Container(color: Colors.black),
             ),
           ),
 
@@ -145,19 +140,15 @@ class _SplashScreenState extends State<SplashScreen>
           Center(
             child: FadeTransition(
               opacity: _fadeAnimation,
-
               child: ScaleTransition(
                 scale: _scaleAnimation,
-
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-
                   children: [
 
                     /// Logo
                     Container(
                       padding: const EdgeInsets.all(20),
-
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
@@ -166,14 +157,12 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFFD700)
-                                .withOpacity(0.3),
+                            color: const Color(0xFFFFD700).withOpacity(0.3),
                             blurRadius: 20,
                             spreadRadius: 5,
                           )
                         ],
                       ),
-
                       child: const Icon(
                         Icons.restaurant_menu_rounded,
                         size: 80,
@@ -185,8 +174,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                     /// App Name
                     Text(
-                      "GLOBAL EATS",
-
+                      "Hunger Zone",
                       style: GoogleFonts.monoton(
                         color: const Color(0xFFFFD700),
                         fontSize: 42,
@@ -197,7 +185,7 @@ class _SplashScreenState extends State<SplashScreen>
                             color: Colors.black,
                             offset: Offset(2, 2),
                             blurRadius: 10,
-                          ),
+                          )
                         ],
                       ),
                     ),
@@ -207,7 +195,6 @@ class _SplashScreenState extends State<SplashScreen>
                     /// Tagline
                     Text(
                       "Taste the World, One Plate at a Time",
-
                       style: GoogleFonts.poppins(
                         color: Colors.white,
                         fontSize: 16,
@@ -229,7 +216,6 @@ class _SplashScreenState extends State<SplashScreen>
                     /// Credit
                     Text(
                       "Designed by Chandni",
-
                       style: GoogleFonts.poppins(
                         color: Colors.white54,
                         fontSize: 14,

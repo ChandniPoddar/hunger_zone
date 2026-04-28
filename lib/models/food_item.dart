@@ -40,6 +40,30 @@ class FoodItem {
     );
   }
 
+  factory FoodItem.fromJson(Map<String, dynamic> json) {
+    return FoodItem(
+      id: json['_id'] ?? '',
+      name: json['name'] ?? '',
+      description: json['description'] ?? '',
+      price: (json['price'] ?? 0.0).toDouble(),
+      imageUrl: json['imageUrl'] ?? '',
+      category: json['category'] ?? '',
+      isAvailable: json['isAvailable'] ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      '_id': id,
+      'name': name,
+      'description': description,
+      'price': price,
+      'imageUrl': imageUrl,
+      'category': category,
+      'isAvailable': isAvailable,
+    };
+  }
+
   // Mock data factory
   static List<FoodItem> getMockItems() {
     return [

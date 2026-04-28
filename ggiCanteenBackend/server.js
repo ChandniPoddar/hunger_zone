@@ -219,8 +219,16 @@ const ItemSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   category: { type: String, required: true },
   imageUrl: { type: String, required: true }, // We will store the URL
+  isAvailable: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
 });
+
+const OutletStatusSchema = new mongoose.Schema({
+  outlet: { type: String, required: true, unique: true },
+  isOpen: { type: Boolean, default: true }
+});
+
+const OutletStatus = mongoose.model("OutletStatus", OutletStatusSchema);
 
 // Create separate collections (tables) for different operators
 const NescafeItem = mongoose.model("NescafeItem", ItemSchema);
@@ -303,27 +311,71 @@ app.get("/items/:category", async (req, res) => {
 });
 
 // Delete item by ID
+// Availability Toggle
+app.put("/item-availability/:category/:id", async (req, res) => {
+  try {
+    const { category, id } = req.params;
+    const { isAvailable } = req.body;
+    let TargetModel;
+
+    switch (category.toLowerCase()) {
+      case "nescafe": TargetModel = NescafeItem; break;
+      case "lipton": TargetModel = LiptonItem; break;
+      case "canteen": TargetModel = CanteenItem; break;
+      case "fruit":
+      case "fruit corner": TargetModel = FruitCornerItem; break;
+      default: TargetModel = GenericItem;
+    }
+
+    const item = await TargetModel.findByIdAndUpdate(id, { isAvailable }, { new: true });
+    res.status(200).json(item);
+  } catch (err) {
+    res.status(500).json({ message: "Error updating availability" });
+  }
+});
+
+// Shop Status Endpoints
+app.get("/shop-status/:outlet", async (req, res) => {
+  try {
+    const outlet = req.params.outlet.toLowerCase();
+    let status = await OutletStatus.findOne({ outlet });
+    if (!status) {
+      status = new OutletStatus({ outlet, isOpen: true });
+      await status.save();
+    }
+    res.status(200).json(status);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching shop status" });
+  }
+});
+
+app.put("/shop-status/:outlet", async (req, res) => {
+  try {
+    const outlet = req.params.outlet.toLowerCase();
+    const { isOpen } = req.body;
+    const status = await OutletStatus.findOneAndUpdate(
+      { outlet },
+      { isOpen },
+      { new: true, upsert: true }
+    );
+    res.status(200).json(status);
+  } catch (err) {
+    res.status(500).json({ message: "Error updating shop status" });
+  }
+});
+
 app.delete("/item/:category/:id", async (req, res) => {
   try {
     const { category, id } = req.params;
     let TargetModel;
 
     switch (category.toLowerCase()) {
-      case "nescafe":
-        TargetModel = NescafeItem;
-        break;
-      case "lipton":
-        TargetModel = LiptonItem;
-        break;
-      case "canteen":
-        TargetModel = CanteenItem;
-        break;
+      case "nescafe": TargetModel = NescafeItem; break;
+      case "lipton": TargetModel = LiptonItem; break;
+      case "canteen": TargetModel = CanteenItem; break;
       case "fruit":
-      case "fruit corner":
-        TargetModel = FruitCornerItem;
-        break;
-      default:
-        TargetModel = GenericItem;
+      case "fruit corner": TargetModel = FruitCornerItem; break;
+      default: TargetModel = GenericItem;
     }
 
     await TargetModel.findByIdAndDelete(id);

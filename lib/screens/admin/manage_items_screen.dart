@@ -46,21 +46,42 @@ class _ManageItemsScreenState extends State<ManageItemsScreen> {
     }
   }
 
+  Future<void> toggleAvailability(String id, bool val) async {
+    try {
+      final response = await http.put(
+        Uri.parse("${AppConstants.baseUrl}/item-availability/${widget.category}/$id"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"isAvailable": val}),
+      );
+      if (response.statusCode == 200) {
+        fetchItems();
+      }
+    } catch (e) {
+      debugPrint("Error toggling availability: $e");
+    }
+  }
+
   Future<void> deleteItem(String id) async {
     bool? confirm = await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: Text("Delete Item", style: GoogleFonts.poppins(color: Colors.white)),
-        content: Text("Are you sure you want to delete this item?", style: GoogleFonts.poppins(color: Colors.white70)),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("Delete Item", style: TextStyle(color: Color(0xFF1A1A2E), fontWeight: FontWeight.bold)),
+        content: const Text("Are you sure you want to delete this item?", style: TextStyle(color: Color(0xFF6C757D))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel", style: TextStyle(color: Colors.white54)),
+            child: const Text("Cancel", style: TextStyle(color: Color(0xFF6C757D), fontWeight: FontWeight.bold)),
           ),
-          TextButton(
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF6B6B),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text("Delete", style: TextStyle(color: Colors.redAccent)),
+            child: const Text("Delete", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -85,22 +106,29 @@ class _ManageItemsScreenState extends State<ManageItemsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color(0xFFF8F9FA), // Light Gray
       appBar: AppBar(
         title: Text(
-          "${widget.category} Items",
-          style: GoogleFonts.poppins(color: const Color(0xFFFFD700)),
+          "${widget.category} Menu",
+          style: const TextStyle(color: Color(0xFF1A1A2E), fontSize: 18, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.black,
-        iconTheme: const IconThemeData(color: Color(0xFFFFD700)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Color(0xFF1A1A2E)),
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFFFFD700)))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B)))
           : items.isEmpty
-              ? Center(
-                  child: Text(
-                    "No items found for this category.",
-                    style: GoogleFonts.poppins(color: Colors.white70),
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inventory_2_outlined, size: 64, color: Color(0xFFE9ECEF)),
+                      SizedBox(height: 16),
+                      Text("No items found", style: TextStyle(color: Color(0xFF1A1A2E), fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text("Please add items to this category.", style: TextStyle(color: Color(0xFF6C757D))),
+                    ],
                   ),
                 )
               : Padding(
@@ -115,11 +143,19 @@ class _ManageItemsScreenState extends State<ManageItemsScreen> {
                     itemCount: items.length,
                     itemBuilder: (context, index) {
                       final item = items[index];
+                      bool isAvailable = item['isAvailable'] ?? true;
+
                       return Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E1E),
-                          borderRadius: BorderRadius.circular(15),
-                          border: Border.all(color: Colors.white10),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 15,
+                              offset: const Offset(0, 6),
+                            )
+                          ],
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: Column(
@@ -134,29 +170,47 @@ class _ManageItemsScreenState extends State<ManageItemsScreen> {
                                     imageUrl: item['imageUrl'] ?? '',
                                     fit: BoxFit.cover,
                                     placeholder: (context, url) => Container(
-                                      color: Colors.white10,
+                                      color: const Color(0xFFF8F9FA),
                                       child: const Center(
-                                        child: CircularProgressIndicator(color: Color(0xFFFFD700), strokeWidth: 2),
+                                        child: CircularProgressIndicator(color: Color(0xFFE9ECEF), strokeWidth: 2),
                                       ),
                                     ),
                                     errorWidget: (context, url, error) => Container(
-                                      color: Colors.white10,
-                                      child: const Icon(Icons.fastfood, color: Colors.white38, size: 40),
+                                      color: const Color(0xFFF8F9FA),
+                                      child: const Icon(Icons.fastfood_outlined, color: Color(0xFFCED4DA), size: 40),
                                     ),
                                   ),
+                                  // Availability Badge
                                   Positioned(
-                                    top: 8,
-                                    right: 8,
+                                    top: 10,
+                                    left: 10,
                                     child: Container(
-                                      decoration: const BoxDecoration(
-                                        color: Colors.black54,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
-                                        onPressed: () => deleteItem(item['_id']),
-                                        padding: const EdgeInsets.all(4),
-                                        constraints: const BoxConstraints(),
+                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                       decoration: BoxDecoration(
+                                         color: isAvailable ? const Color(0xFF28A745) : const Color(0xFFDC3545),
+                                         borderRadius: BorderRadius.circular(8),
+                                         boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                                       ),
+                                       child: Text(
+                                         isAvailable ? "AVAILABLE" : "STOCK OUT",
+                                         style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                                       ),
+                                    ),
+                                  ),
+                                  // Delete Button
+                                  Positioned(
+                                    top: 10,
+                                    right: 10,
+                                    child: GestureDetector(
+                                      onTap: () => deleteItem(item['_id']),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
+                                        ),
+                                        child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF6B6B), size: 18),
                                       ),
                                     ),
                                   ),
@@ -176,18 +230,39 @@ class _ManageItemsScreenState extends State<ManageItemsScreen> {
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: GoogleFonts.poppins(
-                                        color: Colors.white,
+                                        color: const Color(0xFF1A1A2E),
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
                                       ),
                                     ),
-                                    Text(
-                                      "₹${item['price']?.toString() ?? '0'}",
-                                      style: GoogleFonts.poppins(
-                                        color: const Color(0xFFFFD700),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "₹${item['price']?.toString() ?? '0'}",
+                                          style: GoogleFonts.poppins(
+                                            color: const Color(0xFFFF6B6B),
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        // Premium Switch
+                                        SizedBox(
+                                          height: 25,
+                                          width: 45,
+                                          child: FittedBox(
+                                            fit: BoxFit.fill,
+                                            child: Switch(
+                                              value: isAvailable,
+                                              onChanged: (val) => toggleAvailability(item['_id'], val),
+                                              activeColor: const Color(0xFF28A745),
+                                              activeTrackColor: const Color(0xFF28A745).withOpacity(0.3),
+                                              inactiveThumbColor: Colors.white,
+                                              inactiveTrackColor: Colors.grey.shade300,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),

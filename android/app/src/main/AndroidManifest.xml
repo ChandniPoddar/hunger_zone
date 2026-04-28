@@ -5,7 +5,7 @@
     <application
         android:label="GLOBAL EATS"
         android:name="${applicationName}"
-        android:icon="@mipmap/launcher_icon"
+        android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
 
         <!-- Razorpay activity configuration -->

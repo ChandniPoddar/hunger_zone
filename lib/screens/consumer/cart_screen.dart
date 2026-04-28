@@ -10,6 +10,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:hunger_zone/utils/constants.dart';
+import '../../services/notification_service.dart';
+
 
 class CartScreen extends StatefulWidget {
   final String? outletName;
@@ -28,26 +30,21 @@ class _CartScreenState extends State<CartScreen>
   late Animation<double> _fade;
 
   final String razorpayKey = AppConstants.razorpayKey;
-
   final String apiUrl = "${AppConstants.baseUrl}/api/orders";
 
   @override
   void initState() {
     super.initState();
-
     _razorpay = Razorpay();
-
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 500),
     );
-
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-
     _controller.forward();
   }
 
@@ -58,26 +55,11 @@ class _CartScreenState extends State<CartScreen>
     super.dispose();
   }
 
-  String _getOutletImage() {
-    switch (widget.outletName) {
-      case 'Nescafe':
-        return "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=2070&auto=format&fit=crop";
-      case 'Lipton':
-        return "https://images.unsplash.com/photo-1544787210-2213d84ad960?q=80&w=1974&auto=format&fit=crop";
-      case 'Canteen':
-        return "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=1974&auto=format&fit=crop";
-      case 'Fruit Corner':
-        return "https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=2070&auto=format&fit=crop";
-      default:
-        return "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=1974&auto=format&fit=crop";
-    }
-  }
-
   void _openCheckout(double amount) {
     var options = {
       'key': razorpayKey,
       'amount': (amount * 100).toInt(),
-      'name': widget.outletName ?? 'Global Eats',
+      'name': widget.outletName ?? 'Hunger Zone',
       'description': 'Payment for Order',
       'prefill': {
         'contact': AppConstants.defaultContact,
@@ -87,7 +69,6 @@ class _CartScreenState extends State<CartScreen>
         'wallets': ['paytm']
       }
     };
-
     try {
       _razorpay.open(options);
     } catch (e) {
@@ -96,7 +77,6 @@ class _CartScreenState extends State<CartScreen>
   }
 
   Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
-
     final cart = context.read<CartProvider>();
     final auth = context.read<AuthService>();
 
@@ -109,18 +89,15 @@ class _CartScreenState extends State<CartScreen>
     }).toList();
 
     final total = cart.items.values.fold(
-        0.0,
-            (sum, item) =>
-        sum + (item.foodItem.price * item.quantity));
+        0.0, (sum, item) => sum + (item.foodItem.price * item.quantity));
 
     try {
-
       final res = await http.post(
         Uri.parse(apiUrl),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "orderId": DateTime.now().millisecondsSinceEpoch.toString(),
-          "outlet": widget.outletName ?? "Global Eats",
+          "outlet": widget.outletName ?? "Hunger Zone",
           "userName": auth.name ?? "Guest",
           "userPhone": auth.phoneNumber ?? "0000000000",
           "items": items,
@@ -130,411 +107,239 @@ class _CartScreenState extends State<CartScreen>
       );
 
       if (res.statusCode == 200 || res.statusCode == 201) {
-
         cart.clearCart();
-
-        Fluttertoast.showToast(
-            msg: "Payment Successful! Order placed.");
-
-        if (!mounted) return;
-
+        NotificationService.showNotification(
+          id: 1,
+          title: "Order Placed!",
+          body: "Your order for ${widget.outletName} has been received.",
+        );
         Navigator.pop(context);
-
       } else {
-
         Fluttertoast.showToast(msg: "Order failed");
-
       }
-
     } catch (e) {
-
-      Fluttertoast.showToast(
-          msg: "Server error: $e");
-
+      Fluttertoast.showToast(msg: "Server error: $e");
     }
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
-    Fluttertoast.showToast(
-        msg: "Payment Failed: ${response.message}");
+    Fluttertoast.showToast(msg: "Payment Failed: ${response.message}");
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {
-    Fluttertoast.showToast(
-        msg: "External Wallet: ${response.walletName}");
+    Fluttertoast.showToast(msg: "External Wallet: ${response.walletName}");
   }
 
   @override
   Widget build(BuildContext context) {
-
-    final theme = Theme.of(context);
-    final primaryColor = theme.primaryColor;
-    final textColor = theme.colorScheme.onSurface;
-    final subTextColor = textColor.withOpacity(0.6);
+    final primaryColor = const Color(0xFFFF6B6B);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFFFBFBFB),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFBFBFB),
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF1A1A2E), size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Consumer<CartProvider>(
+          builder: (context, cart, child) {
+            final count = cart.items.length;
+            return Text(
+              "My Cart ($count)",
+              style: GoogleFonts.poppins(color: const Color(0xFF1A1A2E), fontWeight: FontWeight.bold, fontSize: 18),
+            );
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF6B6B)),
+            onPressed: () => context.read<CartProvider>().clearCart(),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: Consumer<CartProvider>(
-
         builder: (context, cart, child) {
-
           final items = widget.outletName == null
               ? cart.items.values.toList()
               : cart.items.values
-              .where((item) =>
-          cart.getNormalizedOutlet(
-              item.foodItem.category) ==
-              widget.outletName)
-              .toList();
+                  .where((item) => cart.getNormalizedOutlet(item.foodItem.category) == widget.outletName)
+                  .toList();
 
-          final totalAmount = items.fold(
-              0.0,
-                  (sum, item) =>
-              sum + (item.foodItem.price *
-                  item.quantity));
+          if (items.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  Text("Your cart is empty", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 16)),
+                ],
+              ),
+            );
+          }
 
-          return FadeTransition(
-            opacity: _fade,
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
+          final totalAmount = items.fold(0.0, (sum, item) => sum + (item.foodItem.price * item.quantity));
 
-                SliverAppBar(
-                  pinned: true,
-                  expandedHeight: 220,
-                  backgroundColor:
-                  theme.appBarTheme.backgroundColor,
-                  iconTheme:
-                  theme.appBarTheme.iconTheme,
-
-                  flexibleSpace: FlexibleSpaceBar(
-
-                    centerTitle: true,
-
-                    title: Text(
-                      widget.outletName == null
-                          ? 'GLOBAL CART'
-                          : '${widget.outletName!.toUpperCase()} CART',
-                      style: GoogleFonts.monoton(
-                          color: primaryColor,
-                          fontSize: 16,
-                          letterSpacing: 2),
-                    ),
-
-                    background: Stack(
-                      fit: StackFit.expand,
-                      children: [
-
-                        CachedNetworkImage(
-                          imageUrl: _getOutletImage(),
-                          fit: BoxFit.cover,
-                        ),
-
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                theme.scaffoldBackgroundColor
-                                    .withOpacity(0.15),
-                                Colors.transparent,
-                                theme.scaffoldBackgroundColor
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                          ),
-                        )
-
-                      ],
-                    ),
-                  ),
-                ),
-
-                if (items.isEmpty)
-
-                  SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment:
-                        MainAxisAlignment.center,
-                        children: [
-
-                          Icon(
-                            Icons.shopping_cart_outlined,
-                            size: 80,
-                            color: primaryColor
-                                .withOpacity(0.3),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          Text(
-                            'This outlet cart is empty!',
-                            style: GoogleFonts.poppins(
-                                color: subTextColor,
-                                fontSize: 16),
-                          ),
-
+          return Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
                         ],
                       ),
-                    ),
-                  )
-
-                else
-
-                  SliverPadding(
-                    padding:
-                    const EdgeInsets.all(16),
-                    sliver: SliverList(
-
-                      delegate:
-                      SliverChildBuilderDelegate(
-
-                            (context, index) {
-
-                          final cartItem =
-                          items[index];
-
-                          return Container(
-
-                            margin: const EdgeInsets
-                                .only(bottom: 12),
-
-                            padding:
-                            const EdgeInsets.all(
-                                12),
-
-                            decoration: BoxDecoration(
-                              color:
-                              theme.cardTheme.color,
-                              borderRadius:
-                              BorderRadius.circular(
-                                  20),
+                      child: Row(
+                        children: [
+                          // Item Image
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(15),
+                            child: CachedNetworkImage(
+                              imageUrl: item.foodItem.imageUrl.startsWith('http') 
+                                  ? item.foodItem.imageUrl 
+                                  : "${AppConstants.baseUrl}/${item.foodItem.imageUrl}",
+                              width: 80,
+                              height: 80,
+                              fit: BoxFit.cover,
+                              errorWidget: (context, url, error) => Container(
+                                width: 80,
+                                height: 80,
+                                color: const Color(0xFFF8F9FA),
+                                child: const Icon(Icons.fastfood_outlined, color: Colors.grey),
+                              ),
                             ),
-
-                            child: Row(
+                          ),
+                          const SizedBox(width: 16),
+                          // Details
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-
-                                ClipRRect(
-                                  borderRadius:
-                                  BorderRadius
-                                      .circular(15),
-
-                                  child:
-                                  CachedNetworkImage(
-                                    imageUrl: cartItem
-                                        .foodItem
-                                        .imageUrl,
-                                    width: 70,
-                                    height: 70,
-                                    fit: BoxFit.cover,
-                                  ),
+                                Text(
+                                  item.foodItem.name,
+                                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 15, color: const Color(0xFF1A1A2E)),
                                 ),
-
-                                const SizedBox(
-                                    width: 15),
-
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment
-                                        .start,
-
+                                Text(
+                                  "₹${item.foodItem.price}",
+                                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
+                                ),
+                                const SizedBox(height: 8),
+                                // Quantity Selector
+                                Container(
+                                  height: 32,
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.grey.shade200),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-
-                                      Text(
-                                          cartItem
-                                              .foodItem
-                                              .name,
-
-                                          style: GoogleFonts
-                                              .poppins(
-                                              color:
-                                              textColor,
-                                              fontWeight:
-                                              FontWeight
-                                                  .bold)
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: const Icon(Icons.remove, size: 14, color: Colors.black54),
+                                        onPressed: () => cart.removeSingleItem(item.foodItem.id),
                                       ),
-
-                                      Text(
-                                        '₹${cartItem.foodItem.price}',
-
-                                        style: GoogleFonts
-                                            .poppins(
-                                            color:
-                                            subTextColor,
-                                            fontSize:
-                                            12),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        child: Text(
+                                          "${item.quantity}",
+                                          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: const Color(0xFF1A1A2E)),
+                                        ),
                                       ),
-
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: const Icon(Icons.add, size: 14, color: Colors.black54),
+                                        onPressed: () => cart.addItem(item.foodItem),
+                                      ),
                                     ],
                                   ),
                                 ),
-
-                                Column(
-                                  children: [
-
-                                    Text(
-                                      '₹${(cartItem.foodItem.price * cartItem.quantity).toStringAsFixed(2)}',
-
-                                      style: GoogleFonts
-                                          .poppins(
-                                          color:
-                                          primaryColor,
-                                          fontWeight:
-                                          FontWeight
-                                              .bold),
-                                    ),
-
-                                    Row(
-                                      children: [
-
-                                        IconButton(
-                                          icon: const Icon(
-                                              Icons
-                                                  .remove_circle_outline),
-
-                                          onPressed: () =>
-                                              cart
-                                                  .removeSingleItem(
-                                                  cartItem
-                                                      .foodItem
-                                                      .id),
-                                        ),
-
-                                        Text(cartItem
-                                            .quantity
-                                            .toString()),
-
-                                        IconButton(
-                                          icon: const Icon(
-                                              Icons
-                                                  .add_circle_outline),
-
-                                          onPressed: () =>
-                                              cart.addItem(
-                                                  cartItem
-                                                      .foodItem),
-                                        ),
-
-                                      ],
-                                    )
-
-                                  ],
-                                )
-
                               ],
                             ),
-                          );
-                        },
-
-                        childCount: items.length,
-
-                      ),
-                    ),
-                  ),
-
-                if (items.isNotEmpty)
-
-                  SliverToBoxAdapter(
-                    child: Container(
-
-                      padding:
-                      const EdgeInsets.all(24),
-
-                      margin:
-                      const EdgeInsets.all(16),
-
-                      decoration: BoxDecoration(
-                        color:
-                        theme.cardTheme.color,
-                        borderRadius:
-                        BorderRadius.circular(
-                            25),
-                      ),
-
-                      child: Column(
-                        children: [
-
-                          Row(
-                            mainAxisAlignment:
-                            MainAxisAlignment
-                                .spaceBetween,
-
-                            children: [
-
-                              Text(
-                                  'Outlet Total',
-                                  style: GoogleFonts
-                                      .poppins(
-                                      color:
-                                      subTextColor)
-                              ),
-
-                              Text(
-                                '₹${totalAmount.toStringAsFixed(2)}',
-
-                                style: GoogleFonts
-                                    .poppins(
-                                    color:
-                                    primaryColor,
-                                    fontSize: 24,
-                                    fontWeight:
-                                    FontWeight
-                                        .bold),
-                              ),
-
-                            ],
                           ),
-
-                          const SizedBox(
-                              height: 24),
-
-                          SizedBox(
-                            width: double.infinity,
-                            height: 55,
-
-                            child: ElevatedButton(
-
-                              onPressed: () {
-
-                                if (Platform.isAndroid ||
-                                    Platform.isIOS) {
-
-                                  _openCheckout(
-                                      totalAmount);
-
-                                } else {
-
-                                  _handlePaymentSuccess(
-                                    PaymentSuccessResponse(
-                                        "web",
-                                        "",
-                                        "",
-                                        null),
-                                  );
-
-                                }
-                              },
-
-                              child: const Text(
-                                  'COMPLETE ORDER'),
-                            ),
+                          // Item Total Price
+                          Text(
+                            "₹${(item.foodItem.price * item.quantity).toStringAsFixed(2)}",
+                            style: GoogleFonts.poppins(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15),
                           ),
-
                         ],
                       ),
+                    );
+                  },
+                ),
+              ),
+              // Bottom Section
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(topLeft: Radius.circular(35), topRight: Radius.circular(35)),
+                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 20, offset: Offset(0, -5))],
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Total:",
+                          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
+                        ),
+                        Text(
+                          "₹${totalAmount.toStringAsFixed(2)}",
+                          style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: primaryColor),
+                        ),
+                      ],
                     ),
-                  ),
-
-                const SliverPadding(
-                    padding:
-                    EdgeInsets.only(bottom: 100)),
-              ],
-            ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 60,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: primaryColor,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                          elevation: 0,
+                        ),
+                        onPressed: () => _openCheckout(totalAmount),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              "Proceed to Payment",
+                              style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                            const SizedBox(width: 10),
+                            const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           );
         },
       ),
     );
   }
 }
+

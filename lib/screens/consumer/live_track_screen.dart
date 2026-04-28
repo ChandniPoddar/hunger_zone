@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:hunger_zone/utils/constants.dart';
 import '../../services/auth_service.dart';
+import '../../services/notification_service.dart';
 
 class LiveTrackScreen extends StatefulWidget {
   const LiveTrackScreen({super.key});
@@ -16,14 +18,29 @@ class LiveTrackScreen extends StatefulWidget {
 class _LiveTrackScreenState extends State<LiveTrackScreen> {
   bool _loading = true;
   List _orders = [];
+  Timer? _timer;
+  Map<String, String> _previousStatuses = {};
 
   @override
   void initState() {
     super.initState();
     _fetchMyOrders();
+    _startPolling();
   }
 
-  Future<void> _fetchMyOrders() async {
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      _fetchMyOrders(isPolling: true);
+    });
+  }
+
+  Future<void> _fetchMyOrders({bool isPolling = false}) async {
     final auth = context.read<AuthService>();
     final phone = auth.phoneNumber;
     if (phone == null) {
@@ -34,9 +51,20 @@ class _LiveTrackScreenState extends State<LiveTrackScreen> {
     try {
       final res = await http.get(Uri.parse("${AppConstants.baseUrl}/api/orders/user/$phone"));
       if (res.statusCode == 200) {
+        final List newOrders = json.decode(res.body);
+        
+        if (isPolling) {
+          _checkStatusChanges(newOrders);
+        } else {
+          // Initialize previous statuses on first load
+          for (var order in newOrders) {
+            _previousStatuses[order['orderId']] = order['status'] ?? "Pending";
+          }
+        }
+
         if (mounted) {
           setState(() {
-            _orders = json.decode(res.body);
+            _orders = newOrders;
             _loading = false;
           });
         }
@@ -45,6 +73,24 @@ class _LiveTrackScreenState extends State<LiveTrackScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _checkStatusChanges(List newOrders) {
+    for (var order in newOrders) {
+      final orderId = order['orderId'];
+      final newStatus = order['status'] ?? "Pending";
+      final oldStatus = _previousStatuses[orderId];
+
+      if (oldStatus != null && oldStatus != newStatus) {
+        // Status changed!
+        NotificationService.showNotification(
+          id: orderId.hashCode,
+          title: "Order Update",
+          body: "Your order for ${order['outlet']} is now $newStatus",
+        );
+      }
+      _previousStatuses[orderId] = newStatus;
     }
   }
 
@@ -62,37 +108,65 @@ class _LiveTrackScreenState extends State<LiveTrackScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final primaryColor = const Color(0xFFFF6B6B);
 
-    // Filter orders if needed, we assume backend gives only our orders
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFFFBFBFB),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: const Color(0xFFFBFBFB),
         elevation: 0,
-        title: Text("Live Track", style: GoogleFonts.poppins(color: theme.primaryColor, fontWeight: FontWeight.bold)),
-        iconTheme: IconThemeData(color: theme.primaryColor),
+        centerTitle: true,
+        title: Text(
+          "Live Track", 
+          style: GoogleFonts.poppins(
+            color: Colors.black, 
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          )
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: _loading 
-        ? Center(child: CircularProgressIndicator(color: theme.primaryColor))
+        ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B)))
         : _orders.isEmpty
-          ? Center(child: Text("No active orders found", style: GoogleFonts.poppins(color: Colors.white38)))
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("📦", style: TextStyle(fontSize: 50)),
+                  const SizedBox(height: 16),
+                  Text(
+                    "No active orders found", 
+                    style: GoogleFonts.poppins(color: Colors.grey, fontSize: 16)
+                  ),
+                ],
+              )
+            )
           : ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               itemCount: _orders.length,
               itemBuilder: (context, index) {
                 final order = _orders[index];
                 final List items = order["items"] ?? [];
-                final itemsSummary = items.map((i) => "${i["quantity"]}x ${i["name"]}").join("\n");
+                final itemsSummary = items.map((i) => "${i["quantity"]}x ${i["name"]}").join(", ");
                 final statusColor = _getStatusColor(order["status"] ?? "Pending");
 
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: theme.cardTheme.color ?? const Color(0xFF1E1E1E),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,26 +174,52 @@ class _LiveTrackScreenState extends State<LiveTrackScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text("Outlet: ${order['outlet'] ?? ''}", style: GoogleFonts.poppins(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(
+                            order['outlet'] ?? 'Outlet', 
+                            style: GoogleFonts.poppins(
+                              color: Colors.black, 
+                              fontWeight: FontWeight.bold, 
+                              fontSize: 16
+                            )
+                          ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(color: statusColor.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
-                            child: Text(order["status"] ?? "Pending", style: GoogleFonts.poppins(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1), 
+                              borderRadius: BorderRadius.circular(10)
+                            ),
+                            child: Text(
+                              order["status"] ?? "Pending", 
+                              style: GoogleFonts.poppins(
+                                color: statusColor, 
+                                fontWeight: FontWeight.bold, 
+                                fontSize: 11
+                              )
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      const Divider(color: Colors.white10),
-                      const SizedBox(height: 12),
-                      Text("Items:", style: GoogleFonts.poppins(color: Colors.white38, fontSize: 12)),
-                      const SizedBox(height: 4),
-                      Text(itemsSummary, style: GoogleFonts.poppins(color: Colors.white, fontSize: 14)),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 15),
+                      Text(
+                        "Items: $itemsSummary", 
+                        style: GoogleFonts.poppins(color: Colors.grey.shade600, fontSize: 13)
+                      ),
+                      const SizedBox(height: 20),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text("Order ID: ${order['orderId'] ?? ''}", style: GoogleFonts.poppins(color: Colors.white38, fontSize: 10)),
-                          Text("Total: ₹${order['total']}", style: GoogleFonts.poppins(color: theme.primaryColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text(
+                            "Order ID: ${order['orderId'] ?? ''}", 
+                            style: GoogleFonts.poppins(color: Colors.grey.shade400, fontSize: 10)
+                          ),
+                          Text(
+                            "₹${order['total']}", 
+                            style: GoogleFonts.poppins(
+                              color: primaryColor, 
+                              fontWeight: FontWeight.bold, 
+                              fontSize: 18
+                            )
+                          ),
                         ],
                       ),
                     ],

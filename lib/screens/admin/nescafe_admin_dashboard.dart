@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:http/http.dart' as http;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:hunger_zone/utils/constants.dart';
-
 import '../../services/auth_service.dart';
+import '../../providers/outlet_provider.dart';
 import '../auth/login_screen.dart';
 import '../auth/add_item_screen.dart';
 import 'manage_items_screen.dart';
@@ -18,438 +18,332 @@ class NescafeAdminDashboard extends StatefulWidget {
   State<NescafeAdminDashboard> createState() => _NescafeAdminDashboardState();
 }
 
-class _NescafeAdminDashboardState extends State<NescafeAdminDashboard>
-    with TickerProviderStateMixin {
-
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
-
+class _NescafeAdminDashboardState extends State<NescafeAdminDashboard> with TickerProviderStateMixin {
   List orders = [];
   bool loading = true;
+  int _currentTab = 0;
 
-  final String apiUrl = "${AppConstants.baseUrl}/api/orders/nescafe";
+  final Color primaryCoral = const Color(0xFFFF6B6B);
 
   @override
   void initState() {
     super.initState();
-
-    _fadeController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1000));
-
-    _fadeAnimation =
-        CurvedAnimation(parent: _fadeController, curve: Curves.easeIn);
-
-    _fadeController.forward();
-
     fetchOrders();
   }
 
   Future<void> fetchOrders() async {
     try {
-      final res = await http.get(Uri.parse(apiUrl));
-
-      if (res.statusCode == 200) {
+      final response = await http.get(Uri.parse("${AppConstants.baseUrl}/api/orders/nescafe"));
+      if (response.statusCode == 200) {
         setState(() {
-          orders = json.decode(res.body);
+          orders = jsonDecode(response.body);
           loading = false;
         });
       }
     } catch (e) {
-      print(e);
+      setState(() => loading = false);
     }
   }
 
   Future<void> updateOrderStatus(String id, String status) async {
-
-    await http.put(
-      Uri.parse("${AppConstants.baseUrl}/api/orders/$id/status"),
-      headers: {"Content-Type": "application/json"},
-      body: json.encode({"status": status}),
-    );
-
-    fetchOrders();
-  }
-
-  Color getStatusColor(String status) {
-    switch (status) {
-      case "Pending":
-        return Colors.orange;
-      case "Accepted":
-        return Colors.blue;
-      case "Preparing":
-        return Colors.deepPurple;
-      case "Ready":
-        return Colors.teal;
-      case "Completed":
-        return Colors.green;
-      case "Rejected":
-        return Colors.red;
-      default:
-        return Colors.grey;
+    try {
+      final response = await http.put(
+        Uri.parse("${AppConstants.baseUrl}/api/orders/$id/status"),
+        headers: {"Content-Type": "application/json"},
+        body: json.encode({"status": status}),
+      );
+      if (response.statusCode == 200) {
+        await fetchOrders();
+      }
+    } catch (e) {
+      debugPrint("Error updating status: $e");
     }
   }
 
   @override
   Widget build(BuildContext context) {
-
-    int totalOrders = orders.length;
-
-    double revenue = 0;
-    for (var o in orders) {
-      revenue += (o["total"] ?? 0);
-    }
+    double totalRevenue = orders.fold(0.0, (sum, item) => sum + (item['total'] ?? 0));
+    int pendingCount = orders.where((o) => o['status'] == 'Pending').length;
+    int kitchenCount = orders.where((o) => o['status'] == 'Preparing' || o['status'] == 'Accepted').length;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFFFFD700),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddItemScreen()),
-          );
-        },
-        label: Text(
-          "Add New Item",
-          style: GoogleFonts.poppins(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        icon: const Icon(Icons.add, color: Colors.black),
+        backgroundColor: primaryCoral,
+        onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddItemScreen(outlet: 'Nescafe'))),
+        label: Text("Add Item", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.white)),
+        icon: const Icon(Icons.add, color: Colors.white),
       ),
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: loading
-              ? const Center(
-            child: CircularProgressIndicator(
-              color: Color(0xFFFFD700),
-            ),
-          )
-              : CustomScrollView(
-            slivers: [
-
-              _buildHeader(context),
-
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-
-                      sectionTitle("Outlet Analytics"),
-                      const SizedBox(height: 20),
-
-                      statsGrid(totalOrders, revenue),
-
-                      const SizedBox(height: 32),
-
-                      sectionTitle("Recent Orders"),
-                      const SizedBox(height: 16),
-
-                    ],
-                  ),
-                ),
-              ),
-
-              buildOrders()
-
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return SliverAppBar(
-      expandedHeight: 200,
-      backgroundColor: Colors.transparent,
-      pinned: true,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-
-            CachedNetworkImage(
-              imageUrl:
-              "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085",
-              fit: BoxFit.cover,
-            ),
-
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.3),
-                    Colors.black
-                  ],
-                ),
-              ),
-            ),
-
-            Center(
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
-                  const SizedBox(height: 40),
-
-                  Text(
-                    "NESCAFÉ",
-                    style: GoogleFonts.monoton(
-                      color: const Color(0xFFFFD700),
-                      fontSize: 42,
-                      letterSpacing: 4,
-                    ),
-                  ),
-
-                  Text(
-                    "ADMINISTRATION HUB",
-                    style: GoogleFonts.poppins(
-                        color: Colors.white60,
-                        fontSize: 12,
-                        letterSpacing: 2),
-                  ),
+                  _buildBusinessOverview(),
+                  const SizedBox(height: 25),
+                  _buildStatsGrid(totalRevenue, pendingCount, kitchenCount),
+                  const SizedBox(height: 30),
+                  _buildTabs(),
+                  const SizedBox(height: 20),
+                  _buildOrdersList(),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-      actions: [
-
-        IconButton(
-          icon: const Icon(Icons.logout, color: Color(0xFFFFD700)),
-          onPressed: () async {
-
-            await context.read<AuthService>().logout();
-
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (r) => false,
-            );
-          },
-        )
-      ],
-    );
-  }
-
-  Widget sectionTitle(String text) {
-    return Row(
-      children: [
-        Container(width: 4, height: 24, color: const Color(0xFFFFD700)),
-        const SizedBox(width: 12),
-        Text(text,
-            style: GoogleFonts.poppins(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold))
-      ],
-    );
-  }
-
-  Widget statsGrid(int totalOrders, double revenue) {
-
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: 1.5,
-      children: [
-
-        statCard("Revenue", "₹${revenue.toStringAsFixed(0)}"),
-        statCard("Orders", "$totalOrders"),
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const ManageItemsScreen(category: 'Nescafe'),
-              ),
-            );
-          },
-          child: statCard("Items", "View"),
-        ),
-        statCard("Outlet", "Open"),
-
-      ],
-    );
-  }
-
-  Widget statCard(String label, String value) {
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-          color: const Color(0xFF1E1E1E),
-          borderRadius: BorderRadius.circular(20)),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-
-          Text(value,
-              style: GoogleFonts.poppins(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold)),
-
-          Text(label,
-              style: GoogleFonts.poppins(
-                  color: Colors.white38))
-
+          ),
         ],
       ),
     );
   }
 
-  Widget buildOrders() {
-
-    if (orders.isEmpty) {
-      return const SliverToBoxAdapter(
-          child: Center(child: Text("No Orders")));
-    }
-
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate((context, index) {
-
-          final order = orders[index];
-          final status = order["status"];
-
-          final items = order["items"] as List;
-
-          final itemsSummary =
-          items.map((i) => "${i["quantity"]}x ${i["name"]}").join(", ");
-
-          final statusColor = getStatusColor(status);
-
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
-                borderRadius: BorderRadius.circular(20)),
-            child: Row(
-              children: [
-
-                const Icon(Icons.coffee_maker, color: Color(0xFFFFD700)),
-
-                const SizedBox(width: 16),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-
-                      Text(order["orderId"],
-                          style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
-
-                      Text(itemsSummary,
-                          style: GoogleFonts.poppins(
-                              color: Colors.white60,
-                              fontSize: 12)),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          const Icon(Icons.person, color: Colors.white38, size: 12),
-                          const SizedBox(width: 4),
-                          Text(order['userName'] ?? 'Guest',
-                              style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
-                          const SizedBox(width: 8),
-                          const Icon(Icons.phone, color: Colors.white38, size: 12),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(order['userPhone'] ?? '',
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.poppins(color: Colors.white70, fontSize: 11)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 50, 20, 30),
+      decoration: const BoxDecoration(
+        color: Colors.grey,
+        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+              Container(
+                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: IconButton(
+                  icon: Icon(Icons.logout_rounded, color: primaryCoral),
+                  onPressed: () async {
+                    await context.read<AuthService>().logout();
+                    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
+                  },
                 ),
-
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-
-                    Text("₹${order["total"]}",
-                        style: GoogleFonts.poppins(
-                            color: const Color(0xFFFFD700),
-                            fontWeight: FontWeight.bold)),
-
-                    const SizedBox(height: 6),
-
-                    Text(status,
-                        style: GoogleFonts.poppins(
-                            color: statusColor,
-                            fontSize: 11)),
-
-                    const SizedBox(height: 8),
-
-                    Wrap(
-                      spacing: 6,
-                      children: [
-
-                        if (status == "Pending")
-                          actionBtn("Accept", Colors.blue,
-                                  () => updateOrderStatus(order["_id"], "Accepted")),
-
-                        if (status == "Pending")
-                          actionBtn("Reject", Colors.red,
-                                  () => updateOrderStatus(order["_id"], "Rejected")),
-
-                        if (status == "Accepted")
-                          actionBtn("Prepare", Colors.deepPurple,
-                                  () => updateOrderStatus(order["_id"], "Preparing")),
-
-                        if (status == "Preparing")
-                          actionBtn("Ready", Colors.teal,
-                                  () => updateOrderStatus(order["_id"], "Ready")),
-
-                        if (status == "Ready")
-                          actionBtn("Complete", Colors.green,
-                                  () => updateOrderStatus(order["_id"], "Completed")),
-
-                      ],
-                    )
-                  ],
-                )
-              ],
-            ),
-          );
-
-        }, childCount: orders.length),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(color: primaryCoral, borderRadius: BorderRadius.circular(20)),
+            child: Text("Nescafe Hub", style: GoogleFonts.poppins(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "Partner Dashboard",
+            style: GoogleFonts.poppins(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+          ),
+        ],
       ),
     );
   }
 
-  Widget actionBtn(String text, Color color, VoidCallback onTap) {
+  Widget _buildBusinessOverview() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text("Business Overview", style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF1A1A2E))),
+        Consumer<OutletProvider>(
+          builder: (context, outletProvider, child) {
+            bool isOpen = outletProvider.isOpen('Nescafe');
+            return Row(
+              children: [
+                Text(isOpen ? "OPEN" : "CLOSED", style: GoogleFonts.poppins(color: isOpen ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 14)),
+                const SizedBox(width: 8),
+                Switch(
+                  value: isOpen,
+                  onChanged: (val) => outletProvider.toggleStatus('Nescafe'),
+                  activeColor: Colors.green,
+                ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
 
+  Widget _buildStatsGrid(double revenue, int pending, int kitchen) {
+    return Row(
+      children: [
+        Expanded(child: _buildStatCard("Revenue", "₹${revenue.toStringAsFixed(0)}", Icons.account_balance_wallet, Colors.teal)),
+        const SizedBox(width: 12),
+        Expanded(child: _buildStatCard("Pending", "$pending", Icons.timer, Colors.orange)),
+        const SizedBox(width: 12),
+        Expanded(child: _buildStatCard("Kitchen", "$kitchen", Icons.receipt, Colors.blue)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ManageItemsScreen(category: 'Nescafe'))),
+            child: _buildStatCard("Menu", "Edit", Icons.restaurant_menu, primaryCoral),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 5))],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 10),
+          Text(value, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(label, style: GoogleFonts.poppins(color: Colors.black38, fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabs() {
+    return Row(
+      children: [
+        _buildTabItem("Live Kitchen", 0),
+        const SizedBox(width: 30),
+        _buildTabItem("History", 1),
+      ],
+    );
+  }
+
+  Widget _buildTabItem(String title, int index) {
+    bool active = _currentTab == index;
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: color)),
-        child: Text(text,
-            style: GoogleFonts.poppins(
-                color: color,
-                fontSize: 10,
-                fontWeight: FontWeight.bold)),
+      onTap: () => setState(() => _currentTab = index),
+      child: Column(
+        children: [
+          Text(title, style: GoogleFonts.poppins(fontSize: 16, fontWeight: active ? FontWeight.bold : FontWeight.w500, color: active ? primaryCoral : Colors.black38)),
+          if (active) Container(margin: const EdgeInsets.only(top: 4), height: 3, width: 40, decoration: BoxDecoration(color: primaryCoral, borderRadius: BorderRadius.circular(2))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrdersList() {
+    if (loading) return const Center(child: CircularProgressIndicator());
+    List filteredOrders = _currentTab == 0 ? orders.where((o) => o['status'] != 'Completed' && o['status'] != 'Rejected').toList() : orders.where((o) => o['status'] == 'Completed' || o['status'] == 'Rejected').toList();
+    if (filteredOrders.isEmpty) return Center(child: Text("No orders found", style: GoogleFonts.poppins(color: Colors.black38)));
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: filteredOrders.length,
+      itemBuilder: (context, index) => _buildOrderCard(filteredOrders[index]),
+    );
+  }
+
+  Widget _buildOrderCard(Map order) {
+    final List items = order['items'] ?? [];
+    final String itemsSummary = items.map((i) => "${i['quantity']}x ${i['name']}").join(", ");
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 8))],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)), child: Text("Order #${order['orderId'] ?? '...'}", style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold))),
+              Text(order['status'] ?? "Pending", style: GoogleFonts.poppins(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12)),
+            ],
+          ),
+          const Divider(height: 30),
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: (items.isNotEmpty && items[0]['imageUrl'] != null && items[0]['imageUrl'].toString().isNotEmpty)
+                    ? CachedNetworkImage(
+                        imageUrl: items[0]['imageUrl'].toString().startsWith('http')
+                            ? items[0]['imageUrl']
+                            : "${AppConstants.baseUrl}/${items[0]['imageUrl']}",
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        errorWidget: (context, url, error) => Container(width: 50, height: 50, color: Colors.grey[100], child: const Icon(Icons.fastfood_outlined, color: Colors.black26)),
+                      )
+                    : Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(15)), child: const Icon(Icons.coffee, color: Colors.black45)),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(itemsSummary, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.person, size: 12, color: Colors.black38),
+                        const SizedBox(width: 4),
+                        Text(order['userName'] ?? 'Guest', style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54)),
+                        const SizedBox(width: 10),
+                        const Icon(Icons.phone, size: 12, color: Colors.black38),
+                        const SizedBox(width: 4),
+                        Text(order['userPhone'] ?? '', style: GoogleFonts.poppins(fontSize: 11, color: Colors.black54)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Text("₹${order['total']}", style: GoogleFonts.poppins(fontWeight: FontWeight.w900, fontSize: 18, color: primaryCoral)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          if (order['status'] == 'Pending' || order['status'] == 'Accepted' || order['status'] == 'Preparing' || order['status'] == 'Ready')
+            SizedBox(
+              width: double.infinity,
+              height: 45,
+              child: OutlinedButton(
+                onPressed: () async {
+                  String nextStatus = order['status'] == 'Pending' ? 'Accepted' : order['status'] == 'Accepted' ? 'Preparing' : order['status'] == 'Preparing' ? 'Ready' : 'Completed';
+                  await updateOrderStatus(order['_id'], nextStatus);
+                },
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                    color: order['status'] == 'Pending' ? const Color(0xFFFF6B6B) : 
+                           order['status'] == 'Accepted' ? Colors.blue : 
+                           order['status'] == 'Preparing' ? Colors.amber : Colors.green, 
+                    width: 1.5
+                  ), 
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
+                ),
+                child: Text(
+                  order['status'] == 'Pending' ? 'Accept Order' : 
+                  order['status'] == 'Accepted' ? 'Start Preparing' : 
+                  order['status'] == 'Preparing' ? 'Mark Ready' : 'Complete Order', 
+                  style: GoogleFonts.poppins(
+                    color: order['status'] == 'Pending' ? const Color(0xFFFF6B6B) : 
+                           order['status'] == 'Accepted' ? Colors.blue : 
+                           order['status'] == 'Preparing' ? Colors.amber : Colors.green, 
+                    fontWeight: FontWeight.bold
+                  )
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 }
+

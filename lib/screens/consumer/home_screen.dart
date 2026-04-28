@@ -1,20 +1,26 @@
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../providers/theme_provider.dart';
+import '../../providers/outlet_provider.dart';
+
+
+
 
 import '../../services/auth_service.dart';
 import '../auth/operator_user.dart';
-import '../../models/food_item.dart';
 import '../profile/profile_screen.dart';
-import '../settings/settings_screen.dart'; 
-import 'product_list_screen.dart';
+
 import 'canteen_screen.dart';
 import 'lipton_screen.dart';
 import 'fruitcorner_screen.dart';
 import 'nescafe_screen.dart';
 import 'live_track_screen.dart';
+
+import 'wishlist_screen.dart';
+import 'history_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,41 +29,9 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  late final List<FoodItem> _products;
+class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   int _selectedIndex = 0;
-
-  late AnimationController _fadeController;
-  late Animation<double> _fade;
-  
-  late AnimationController _logoController;
-  late Animation<double> _logoScale;
-  late Animation<double> _logoRotate;
-  late Animation<double> _glowAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _products = FoodItem.getMockItems();
-    
-    _fadeController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
-    _fade = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
-    _fadeController.forward();
-
-    _logoController = AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat(reverse: true);
-    _logoScale = Tween<double>(begin: 1.0, end: 1.1).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeInOutSine));
-    _logoRotate = Tween<double>(begin: -0.02, end: 0.02).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeInOutSine));
-    _glowAnimation = Tween<double>(begin: 5.0, end: 20.0).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeInOutSine));
-  }
-
-  @override
-  void dispose() {
-    _fadeController.dispose();
-    _logoController.dispose();
-    super.dispose();
-  }
 
   void _openCategory(BuildContext context, String category) {
     if (category == 'Lipton') {
@@ -68,259 +42,592 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const FruitCornerScreen()));
     } else if (category == 'Canteen') {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const CanteenScreen()));
-    } else {
-      final filteredProducts = _products.where((item) => item.category.trim() == category).toList();
-      Navigator.push(context, MaterialPageRoute(builder: (_) => ProductListScreen(category: category, products: filteredProducts)));
     }
   }
 
-  void _refreshHomeScreen() {
-    _fadeController.reset();
-    _fadeController.forward();
-    setState(() => _selectedIndex = 0);
+  void _onNavItemTapped(int index) {
+    if (index == 0) return; // Already on Home
+    
+    if (index == 1) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistScreen()));
+    } else if (index == 2) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveTrackScreen()));
+    } else if (index == 3) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen()));
+    } else if (index == 4) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: theme.scaffoldBackgroundColor,
-      drawer: _buildDrawer(context, theme),
-      extendBody: true, 
-      bottomNavigationBar: _buildAnimatedBottomNavBar(theme),
-      body: FadeTransition(
-        opacity: _fade,
-        child: CustomScrollView(
+      backgroundColor: const Color(0xFFF8F9FA), // Light Gray
+      drawer: _buildDrawer(context),
+      bottomNavigationBar: _buildBottomNav(),
+      body: SafeArea(
+        child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverAppBar(
-              pinned: true, stretch: true, expandedHeight: 350, backgroundColor: theme.appBarTheme.backgroundColor,
-              leading: IconButton(
-                icon: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(color: theme.colorScheme.surface.withOpacity(0.2), shape: BoxShape.circle, border: Border.all(color: theme.primaryColor.withOpacity(0.3))),
-                  child: Icon(Icons.menu, color: theme.primaryColor, size: 24),
-                ),
-                onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. APP BAR
+              _buildAppBar(context),
+              
+              // 2. HERO SECTION
+              _buildHeroSection(),
+              
+              // 3. QUICK CRAVINGS
+              _buildQuickCravings(),
+
+              // 4. CAMPUS HUBS
+              _buildCampusHubs(),
+              
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.segment_rounded, color: Color(0xFF1A1A2E), size: 28),
+            onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+          Column(
+            children: [
+              Row(
+                children: const [
+                  Icon(Icons.location_on_rounded, color: Color(0xFFFF4B4B), size: 16),
+                  SizedBox(width: 4),
+                  Text("GGI CAMPUS", style: TextStyle(color: Color(0xFF1A1A2E), fontWeight: FontWeight.w900, fontSize: 16)),
+                  Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF1A1A2E), size: 20),
+                ],
               ),
-              flexibleSpace: FlexibleSpaceBar(
-                stretchModes: const [StretchMode.zoomBackground, StretchMode.blurBackground, StretchMode.fadeTitle],
-                centerTitle: true,
-                title: AnimatedBuilder(
-                  animation: _logoController,
-                  builder: (context, child) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
-                      ),
-                      child: Text('GLOBAL EATS', style: GoogleFonts.monoton(color: theme.primaryColor, fontSize: 18, letterSpacing: 2, shadows: [Shadow(color: theme.primaryColor.withOpacity(0.6), blurRadius: _glowAnimation.value)])),
-                    );
-                  },
+              const Text("Amritsar, Punjab", style: TextStyle(color: Color(0xFF6C757D), fontSize: 12, fontWeight: FontWeight.w500)),
+            ],
+          ),
+          GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: const Color(0xFFFF4B4B).withOpacity(0.1),
+              child: const Icon(Icons.person_rounded, color: Color(0xFFFF4B4B), size: 20),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(50),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: TextField(
+          decoration: InputDecoration(
+            hintText: "Search for 'Burgers' or 'Nescafe'...",
+            hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 14),
+            prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFFF4B4B)),
+            suffixIcon: const Icon(Icons.tune_rounded, color: Color(0xFFFF4B4B)),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeroSection() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Container(
+        height: 160,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          image: const DecorationImage(
+            image: AssetImage("assets/images/global_image.jpeg"), // Used global_image.jpeg as requested collage
+            fit: BoxFit.cover,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ]
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: LinearGradient(
+              colors: [
+                Colors.black.withOpacity(0.7),
+                Colors.black.withOpacity(0.1),
+                Colors.transparent,
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                "CAMPUS FAVORITES",
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                "Fresh meals from Nescafe & Lipton",
+                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => _openCategory(context, 'Nescafe'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
                 ),
-                background: Stack(
-                  fit: StackFit.expand,
+                child: const Text("ORDER NOW", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickCravings() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text("Quick Cravings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1A1A2E))),
+              Text("See All", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFFFF4B4B))),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 100,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            physics: const BouncingScrollPhysics(),
+            children: [
+              _buildCravingItem(Icons.lunch_dining_rounded, "Burger"),
+              _buildCravingItem(Icons.local_pizza_rounded, "Pizza"),
+              _buildCravingItem(Icons.coffee_rounded, "Coffee"),
+              _buildCravingItem(Icons.eco_rounded, "Healthy"),
+              _buildCravingItem(Icons.cake_rounded, "Sweet"),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCravingItem(IconData icon, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 16),
+      child: Column(
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ]
+            ),
+            child: Center(
+              child: Icon(icon, color: const Color(0xFFFF4B4B), size: 32),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1A1A2E))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCampusHubs() {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Campus Hubs", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1A1A2E))),
+          const SizedBox(height: 16),
+          _buildHubCard("Main Canteen", "North Indian • Fast Food", "4.2", "assets/images/canteen.jpeg", "Canteen"),
+          const SizedBox(height: 16),
+          _buildHubCard("Nescafe Hub", "Coffee • Snacks", "4.5", "assets/images/nescaffe.jpeg", "Nescafe"),
+          const SizedBox(height: 16),
+          _buildHubCard("Lipton Corner", "Tea • Bakery", "4.3", "assets/images/lipton_image.jpeg", "Lipton"),
+          const SizedBox(height: 16),
+          _buildHubCard("Fruit Corner", "Healthy • Juices", "4.8", "assets/images/fruit_corner.jpeg", "Fruit Corner"),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHubCard(String title, String subtitle, String rating, String imagePath, String category) {
+    return Consumer<OutletProvider>(
+      builder: (context, outletProvider, child) {
+        bool isOpen = outletProvider.isOpen(category);
+        
+        return GestureDetector(
+          onTap: () => _openCategory(context, category),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ]
+            ),
+            child: Column(
+              children: [
+                Stack(
                   children: [
-                    Image.asset('assets/images/global_image.jpeg', fit: BoxFit.cover, errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey[900], child: Icon(Icons.broken_image, color: theme.primaryColor, size: 50))),
                     Container(
+                      height: 150,
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            // 🌟 Optimized for Light Mode clarity (reduced from 0.8 to 0.15)
-                            theme.scaffoldBackgroundColor.withOpacity(0.15), 
-                            Colors.transparent, 
-                            theme.scaffoldBackgroundColor.withOpacity(0.3), 
-                            theme.scaffoldBackgroundColor
-                          ], 
-                          stops: const [0.0, 0.4, 0.7, 1.0], 
-                          begin: Alignment.topCenter, 
-                          end: Alignment.bottomCenter
-                        )
+                        borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+                        image: DecorationImage(
+                          image: AssetImage(imagePath),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    if (!isOpen)
+                      Container(
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+                        ),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.lock_clock_rounded, color: Colors.white, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "CLOSED", 
+                                  style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.2)
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF1A1A2E))),
+                          const SizedBox(height: 4),
+                          Text(subtitle, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF6C757D))),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF28A745), // Green color matching screenshot
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Text(rating, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.star_rounded, color: Colors.white, size: 13),
+                          ],
+                        ),
                       )
+                    ],
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBottomNav() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: const Color(0xFFE9ECEF), width: 1)),
+      ),
+      child: NavigationBar(
+        height: 65,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onNavItemTapped,
+        indicatorColor: const Color(0xFFFF4B4B).withOpacity(0.1),
+        destinations: [
+          NavigationDestination(
+            icon: Icon(Icons.home_rounded, color: _selectedIndex == 0 ? const Color(0xFFFF4B4B) : const Color(0xFFADB5BD)),
+            label: "Home",
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.favorite_rounded, color: _selectedIndex == 1 ? const Color(0xFFFF4B4B) : const Color(0xFFADB5BD)),
+            label: "Wishlist",
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.local_shipping_rounded, color: _selectedIndex == 2 ? const Color(0xFFFF4B4B) : const Color(0xFFADB5BD)),
+            label: "Track",
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_rounded, color: _selectedIndex == 3 ? const Color(0xFFFF4B4B) : const Color(0xFFADB5BD)),
+            label: "History",
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_rounded, color: _selectedIndex == 4 ? const Color(0xFFFF4B4B) : const Color(0xFFADB5BD)),
+            label: "Profile",
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context) {
+    final authService = context.read<AuthService>();
+    final user = authService.currentUser;
+
+    return Drawer(
+      backgroundColor: const Color(0xFFF8F9FA),
+      child: Column(
+        children: [
+          // Premium Header
+          Container(
+            padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 30),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(bottomRight: Radius.circular(40)),
+              boxShadow: [BoxShadow(color: Color(0x0A000000), blurRadius: 20, offset: Offset(0, 10))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: const Color(0xFFFF4B4B).withOpacity(0.1), borderRadius: BorderRadius.circular(15)),
+                      child: const Icon(Icons.restaurant_menu_rounded, color: Color(0xFFFF4B4B), size: 30),
+                    ),
+                    IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded, color: Color(0xFFADB5BD))),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: const Color(0xFFFF4B4B).withOpacity(0.1),
+                      child: const Icon(Icons.person_rounded, color: Color(0xFFFF4B4B), size: 30),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user?['name'] ?? "Welcome Guest",
+                            style: const TextStyle(color: Color(0xFF1A1A2E), fontSize: 18, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            user?['phoneNumber'] ?? "Join the movement",
+                            style: const TextStyle(color: Color(0xFF6C757D), fontSize: 12),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
-            
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [
-                      Text('Hungry? ', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w300, color: theme.colorScheme.onSurface)),
-                      const Text('😋', style: TextStyle(fontSize: 28)),
-                    ]),
-                    Text('Global Eats Excellence', style: GoogleFonts.poppins(fontSize: 34, fontWeight: FontWeight.bold, color: theme.primaryColor, height: 1.1)),
-                    const SizedBox(height: 40),
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                      Text('Explore Categories', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
-                      Container(width: 40, height: 2, color: theme.primaryColor)
-                    ]),
-                  ],
+          ),
+
+          const SizedBox(height: 24),
+
+          // Menu Items
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _buildDrawerItem(Icons.home_outlined, Icons.home_rounded, "Campus Home", 0, () {
+                  Navigator.pop(context);
+                  setState(() => _selectedIndex = 0);
+                }),
+                _buildDrawerItem(Icons.history_outlined, Icons.history_rounded, "My Orders", 3, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen()));
+                }),
+                _buildDrawerItem(Icons.favorite_outline_rounded, Icons.favorite_rounded, "My Wishlist", 1, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistScreen()));
+                }),
+                _buildDrawerItem(Icons.local_shipping_outlined, Icons.local_shipping_rounded, "Track Order", 2, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveTrackScreen()));
+                }),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
+                  child: Divider(color: Color(0xFFE9ECEF)),
                 ),
-              ),
+                _buildDrawerItem(Icons.person_outline_rounded, Icons.person_rounded, "Profile Settings", 4, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                }),
+                _buildDrawerItem(Icons.notifications_none_rounded, Icons.notifications_rounded, "Notifications", -1, () {}),
+                _buildDrawerItem(Icons.help_outline_rounded, Icons.help_rounded, "Help & Support", -1, () {}),
+                
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
+                  child: Divider(color: Color(0xFFE9ECEF)),
+                ),
+                
+                // Theme Toggle
+                Consumer<ThemeProvider>(
+                  builder: (context, themeProvider, child) {
+                    return SwitchListTile(
+                      activeColor: const Color(0xFFFF4B4B),
+                      secondary: Icon(
+                        themeProvider.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                        color: themeProvider.isDarkMode ? const Color(0xFFFFD700) : const Color(0xFFFF4B4B),
+                      ),
+                      title: Text(
+                        themeProvider.isDarkMode ? "Dark Mode" : "Light Mode",
+                        style: const TextStyle(color: Color(0xFF1A1A2E), fontWeight: FontWeight.w500, fontSize: 15),
+                      ),
+                      value: themeProvider.isDarkMode,
+                      onChanged: (value) {
+                        themeProvider.toggleTheme();
+                      },
+                    );
+                  },
+                ),
+              ],
             ),
-            SliverPadding(
-              padding: const EdgeInsets.all(24),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 24, crossAxisSpacing: 24, childAspectRatio: 0.85),
-                delegate: SliverChildListDelegate([
-                  _buildEnhancedCategoryCard(theme, 'Nescafe', Icons.coffee_rounded, "assets/images/nescaffe.jpeg"),
-                  _buildEnhancedCategoryCard(theme, 'Lipton', Icons.emoji_food_beverage_rounded, "assets/images/lipton_image.jpeg"),
-                  _buildEnhancedCategoryCard(theme, 'Canteen', Icons.restaurant_rounded, "assets/images/canteen.jpeg"),
-                  _buildEnhancedCategoryCard(theme, 'Fruit Corner', Icons.apple_rounded, "assets/images/fruit_corner.jpeg"),
-                ]),
-              ),
-            ),
-            
-            const SliverPadding(padding: EdgeInsets.only(bottom: 120)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAnimatedBottomNavBar(ThemeData theme) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      height: 80,
-      decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(35)),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(35),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface.withOpacity(0.8), 
-              borderRadius: BorderRadius.circular(35), 
-              border: Border.all(color: theme.primaryColor.withOpacity(0.6), width: 1.5)
-            ),
-            child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-              _buildNavItem(theme, 0, Icons.home_rounded, "Home"),
-              _buildNavItem(theme, 1, Icons.local_offer_rounded, "Offers"),
-              _buildNavItem(theme, 2, Icons.local_shipping_rounded, "Live Track"),
-              _buildNavItem(theme, 3, Icons.person_rounded, "Profile"),
-            ]),
           ),
-        ),
+
+          // Logout Button
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF4B4B).withOpacity(0.05),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: ListTile(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                leading: const Icon(Icons.logout_rounded, color: Color(0xFFFF4B4B)),
+                title: const Text("Logout", style: TextStyle(color: Color(0xFFFF4B4B), fontWeight: FontWeight.bold)),
+                onTap: () async {
+                  await authService.logout();
+                  if (!mounted) return;
+                  Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const OperatorUserScreen()), (_) => false);
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildNavItem(ThemeData theme, int index, IconData icon, String label) {
+  Widget _buildDrawerItem(IconData icon, IconData activeIcon, String title, int index, VoidCallback onTap) {
     bool isSelected = _selectedIndex == index;
-    Color unselectedColor = theme.colorScheme.onSurface.withOpacity(0.5);
 
-    return GestureDetector(
-      onTap: () {
-        if (label == "Home") {
-          _refreshHomeScreen();
-        } else {
-          setState(() => _selectedIndex = index);
-          if (label == "Profile") {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
-          } else if (label == "Live Track") {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveTrackScreen()));
-          }
-        }
-      },
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: isSelected ? theme.primaryColor.withOpacity(0.1) : Colors.transparent, shape: BoxShape.circle),
-          child: Icon(icon, color: isSelected ? theme.primaryColor : unselectedColor, size: 26),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFFFF4B4B).withOpacity(0.1) : Colors.transparent,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: ListTile(
+        onTap: onTap,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        leading: Icon(
+          isSelected ? activeIcon : icon,
+          color: isSelected ? const Color(0xFFFF4B4B) : const Color(0xFF495057),
         ),
-        Text(label, style: GoogleFonts.poppins(color: isSelected ? theme.primaryColor : unselectedColor, fontSize: 10, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-      ]),
-    );
-  }
-
-  Widget _buildEnhancedCategoryCard(ThemeData theme, String title, IconData icon, String imagePath) {
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 500),
-      tween: Tween(begin: 0.0, end: 1.0),
-      builder: (context, value, child) => Transform.scale(scale: value, child: Opacity(opacity: value, child: child)),
-      child: GestureDetector(
-        onTap: () => _openCategory(context, title),
-        child: Container(
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(30), boxShadow: [BoxShadow(color: theme.primaryColor.withOpacity(0.1), blurRadius: 15, offset: const Offset(0, 8))]),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: Stack(children: [
-              imagePath.startsWith('assets') ? Image.asset(imagePath, fit: BoxFit.cover, width: double.infinity, height: double.infinity) : CachedNetworkImage(imageUrl: imagePath, fit: BoxFit.cover, width: double.infinity, height: double.infinity),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent, 
-                      theme.scaffoldBackgroundColor.withOpacity(theme.brightness == Brightness.light ? 0.4 : 0.9)
-                    ], 
-                    begin: Alignment.topCenter, 
-                    end: Alignment.bottomCenter
-                  )
-                )
-              ),
-              Center(
-                child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: theme.colorScheme.surface.withOpacity(0.2), shape: BoxShape.circle, border: Border.all(color: theme.primaryColor.withOpacity(0.5))), child: Icon(icon, color: theme.primaryColor, size: 32)),
-                  const SizedBox(height: 12),
-                  Text(title, style: GoogleFonts.poppins(color: theme.colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1)),
-                ]),
-              ),
-            ]),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFFFF4B4B) : const Color(0xFF1A1A2E),
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            fontSize: 15,
           ),
         ),
+        trailing: isSelected 
+          ? Container(width: 4, height: 20, decoration: BoxDecoration(color: const Color(0xFFFF4B4B), borderRadius: BorderRadius.circular(10)))
+          : const Icon(Icons.chevron_right_rounded, color: Color(0xFFCED4DA), size: 18),
       ),
-    );
-  }
-
-  Widget _buildDrawer(BuildContext context, ThemeData theme) {
-    final logoUrl = "https://cdn-icons-png.flaticon.com/512/3170/3170733.png";
-    return Drawer(
-      backgroundColor: theme.colorScheme.surface,
-      child: Column(children: [
-        DrawerHeader(
-          decoration: BoxDecoration(color: theme.scaffoldBackgroundColor, border: Border(bottom: BorderSide(color: theme.primaryColor, width: 0.5))),
-          child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Container(width: 70, height: 70, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: theme.primaryColor, width: 1.5)), child: ClipOval(child: CachedNetworkImage(imageUrl: logoUrl, fit: BoxFit.cover))),
-            const SizedBox(height: 10),
-            Text("GLOBAL EATS", style: GoogleFonts.monoton(color: theme.primaryColor, fontSize: 18)),
-          ])),
-        ),
-        _buildDrawerItem(context, Icons.coffee, "Nescafe Menu", () => _openCategory(context, "Nescafe")),
-        _buildDrawerItem(context, Icons.local_cafe, "Lipton Corner", () => _openCategory(context, "Lipton")),
-        _buildDrawerItem(context, Icons.restaurant, "Main Canteen", () => _openCategory(context, "Canteen")),
-        _buildDrawerItem(context, Icons.apple, "Fruit Corner", () => _openCategory(context, "Fruit Corner")),
-        const Divider(color: Colors.white12),
-        _buildDrawerItem(context, Icons.history, "My Orders", () {}),
-        _buildDrawerItem(context, Icons.person, "Profile", () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()))),
-        _buildDrawerItem(context, Icons.settings, "Settings", () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
-        const Spacer(),
-        _buildDrawerItem(context, Icons.logout, "Logout", () async {
-          await context.read<AuthService>().logout();
-          if (!mounted) return;
-          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const OperatorUserScreen()), (_) => false);
-        }, color: Colors.redAccent),
-        const SizedBox(height: 20),
-      ]),
-    );
-  }
-
-  Widget _buildDrawerItem(BuildContext context, IconData icon, String title, VoidCallback onTap, {Color? color}) {
-    final theme = Theme.of(context);
-    return ListTile(
-      leading: Icon(icon, color: color ?? theme.primaryColor),
-      title: Text(title, style: GoogleFonts.poppins(color: theme.textTheme.bodyLarge?.color, fontSize: 16)),
-      onTap: onTap,
     );
   }
 }

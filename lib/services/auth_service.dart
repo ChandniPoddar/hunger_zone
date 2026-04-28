@@ -192,8 +192,8 @@ class AuthService extends ChangeNotifier {
       /// 1. Check Admin Shortcuts first
       if (_adminCredentials.containsKey(phoneNumber) &&
           _adminCredentials[phoneNumber]!['pass'] == password) {
-        this.role = "admin";
-        this.outletName = _adminCredentials[phoneNumber]!['outlet'];
+        role = "admin";
+        outletName = _adminCredentials[phoneNumber]!['outlet'];
         this.phoneNumber = phoneNumber;
         await _saveLoginData({'lastVerified': DateTime.now().toIso8601String()});
         return null;
@@ -212,9 +212,9 @@ class AuthService extends ChangeNotifier {
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
-        this.role = data["role"] ?? "user";
-        this.name = data["name"];
-        this.outletName = data["outletName"];
+        role = data["role"] ?? "user";
+        name = data["name"];
+        outletName = data["outletName"];
         this.phoneNumber = phoneNumber;
 
         await _saveLoginData(data);
