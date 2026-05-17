@@ -167,7 +167,9 @@ class _ManageItemsScreenState extends State<ManageItemsScreen> {
                                 fit: StackFit.expand,
                                 children: [
                                   CachedNetworkImage(
-                                    imageUrl: item['imageUrl'] ?? '',
+                                    imageUrl: (item['imageUrl']?.toString() ?? '').startsWith('http')
+                                        ? item['imageUrl'].toString()
+                                        : "${AppConstants.baseUrl}${item['imageUrl']?.toString().startsWith('/') == true ? '' : '/'}${item['imageUrl']}",
                                     fit: BoxFit.cover,
                                     placeholder: (context, url) => Container(
                                       color: const Color(0xFFF8F9FA),

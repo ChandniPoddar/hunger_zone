@@ -275,9 +275,9 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard> with Tick
                 borderRadius: BorderRadius.circular(15),
                 child: (items.isNotEmpty && items[0]['imageUrl'] != null && items[0]['imageUrl'].toString().isNotEmpty)
                     ? CachedNetworkImage(
-                        imageUrl: items[0]['imageUrl'].toString().startsWith('http')
-                            ? items[0]['imageUrl']
-                            : "${AppConstants.baseUrl}/${items[0]['imageUrl']}",
+                        imageUrl: (items[0]['imageUrl']?.toString() ?? '').startsWith('http')
+                            ? items[0]['imageUrl'].toString()
+                            : "${AppConstants.baseUrl}${items[0]['imageUrl']?.toString().startsWith('/') == true ? '' : '/'}${items[0]['imageUrl']}",
                         width: 50,
                         height: 50,
                         fit: BoxFit.cover,

@@ -20,11 +20,13 @@
   "homepage": "https://github.com/ChandniPoddar/try_code#readme",
   "dependencies": {
     "body-parser": "^2.2.2",
+    "cloudinary": "^1.41.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "mongoose": "^9.3.0",
     "multer": "^2.1.1",
+    "multer-storage-cloudinary": "^4.0.0",
     "twilio": "^5.13.1"
   }
 }

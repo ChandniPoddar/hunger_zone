@@ -59,7 +59,7 @@ class ProductCard extends StatelessWidget {
                             : CachedNetworkImage(
                                 imageUrl: foodItem.imageUrl.startsWith('http') 
                                     ? foodItem.imageUrl 
-                                    : "${AppConstants.baseUrl}/${foodItem.imageUrl}",
+                                    : "${AppConstants.baseUrl}${foodItem.imageUrl.startsWith('/') ? '' : '/'}${foodItem.imageUrl}",
                                 fit: BoxFit.cover,
                                 width: 100,
                                 height: 100,

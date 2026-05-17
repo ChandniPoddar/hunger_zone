@@ -23,13 +23,15 @@ async function migrate() {
 
     for (const colName of collections) {
       const Model = mongoose.model(colName, ItemSchema, colName);
-      const items = await Model.find({ imageUrl: { $regex: OLD_IP } });
+      const items = await Model.find({});
       
-      console.log(`Found ${items.length} items in ${colName} with old IP.`);
+      console.log(`Processing ${items.length} items in ${colName}...`);
 
       for (const item of items) {
-        item.imageUrl = item.imageUrl.replace(OLD_IP, NEW_IP);
-        await item.save();
+        if (item.imageUrl && item.imageUrl.includes('/uploads/')) {
+          item.imageUrl = 'uploads/' + item.imageUrl.split('/uploads/')[1];
+          await item.save();
+        }
       }
       
       if (items.length > 0) {

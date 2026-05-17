@@ -9,20 +9,22 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const multer = require("multer");
+const { v2: cloudinary } = require("cloudinary");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 const app = express();
 
-// Ensure uploads folder exists
-if (!fs.existsSync("./uploads")) {
-  fs.mkdirSync("./uploads");
-}
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dgbizoren',
+  api_key: process.env.CLOUDINARY_API_KEY || '926861566916778',
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'LmWNHNJn_iJbAbEE_q7u4EaqGyM'
+});
 
-// Multer settings
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+// Multer Cloudinary settings
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "canteen_items",
+    allowedFormats: ["jpg", "jpeg", "png", "webp"]
   }
 });
 const upload = multer({ storage: storage });
@@ -244,7 +246,8 @@ app.post("/add-item", upload.single("image"), async (req, res) => {
     let imageUrl = req.body.imageUrl;
 
     if (req.file) {
-      imageUrl = `${process.env.BASE_URL}/uploads/${req.file.filename}`;
+      // Cloudinary returns the full URL in req.file.path
+      imageUrl = req.file.path;
     }
 
     if (!name || !price || !category || !imageUrl) {
