@@ -10,4 +10,20 @@ import UIKit
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
+
+  override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    var userInfo: [String: Any] = [:]
+    userInfo["options"] = options
+    userInfo["openUrl"] = url
+    NotificationCenter.default.post(
+      name: Notification.Name("ApplicationOpenURLNotification"),
+      object: nil,
+      userInfo: userInfo
+    )
+    return super.application(app, open: url, options: options)
+  }
 }

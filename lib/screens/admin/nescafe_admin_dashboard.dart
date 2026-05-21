@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
@@ -66,7 +67,16 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard> with Tick
     int pendingCount = orders.where((o) => o['status'] == 'Pending').length;
     int kitchenCount = orders.where((o) => o['status'] == 'Preparing' || o['status'] == 'Accepted').length;
 
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+        if (Navigator.canPop(context)) {
+          return true;
+        } else {
+          SystemNavigator.pop();
+          return false;
+        }
+      },
+      child: Scaffold(
       backgroundColor: Colors.white,
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: primaryCoral,
@@ -96,7 +106,7 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard> with Tick
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildHeader() {
@@ -114,7 +124,13 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard> with Tick
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    SystemNavigator.pop();
+                  }
+                },
               ),
               Container(
                 decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),

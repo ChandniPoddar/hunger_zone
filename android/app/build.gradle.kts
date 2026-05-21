@@ -5,6 +5,14 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+repositories {
+    google()
+    mavenCentral()
+    maven {
+        url = uri("https://phonepe.mycloudrepo.io/public/repositories/phonepe-intentsdk-android")
+    }
+}
+
 android {
     namespace = "com.example.ggi_canteen"
     compileSdk = 36

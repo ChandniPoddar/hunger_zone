@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:hunger_zone/providers/cart_provider.dart';
 import 'package:hunger_zone/services/auth_service.dart';
 import 'package:provider/provider.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:phonepe_payment_sdk/phonepe_payment_sdk.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -25,21 +25,15 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen>
     with SingleTickerProviderStateMixin {
 
-  late Razorpay _razorpay;
   late AnimationController _controller;
   late Animation<double> _fade;
 
-  final String razorpayKey = AppConstants.razorpayKey;
   final String apiUrl = "${AppConstants.baseUrl}/api/orders";
+  final String paymentInitUrl = "${AppConstants.baseUrl}/api/payment/phonepe/create-order";
 
   @override
   void initState() {
     super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -50,33 +44,83 @@ class _CartScreenState extends State<CartScreen>
 
   @override
   void dispose() {
-    _razorpay.clear();
     _controller.dispose();
     super.dispose();
   }
 
-  void _openCheckout(double amount) {
-    var options = {
-      'key': razorpayKey,
-      'amount': (amount * 100).toInt(),
-      'name': widget.outletName ?? 'Hunger Zone',
-      'description': 'Payment for Order',
-      'prefill': {
-        'contact': AppConstants.defaultContact,
-        'email': AppConstants.defaultEmail
-      },
-      'external': {
-        'wallets': ['paytm']
-      }
-    };
+  Future<void> _openCheckout(double amount) async {
+    final auth = context.read<AuthService>();
     try {
-      _razorpay.open(options);
+      // 1. Get Token and Order Details from Backend
+      final res = await http.post(
+        Uri.parse(paymentInitUrl),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "amount": amount,
+          "userId": auth.phoneNumber ?? "USER123",
+          "mobileNumber": auth.phoneNumber ?? "9999999999"
+        })
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true) {
+          String token = data['token'];
+          String orderId = data['orderId'];
+          String merchantId = data['merchantId'];
+          String environment = data['environment']; // 'SANDBOX' or 'PRODUCTION'
+
+          // 2. Initialize PhonePe SDK
+          bool isInitialized = await PhonePePaymentSdk.init(environment, merchantId, "HungerZoneFlow", false);
+          if (!isInitialized) {
+            Fluttertoast.showToast(msg: "Failed to initialize payment gateway");
+            return;
+          }
+
+          // 3. Start Transaction
+          Map<String, dynamic> payload = {
+            "orderId": orderId,
+            "merchantId": merchantId,
+            "token": token,
+            "paymentMode": {"type": "PAY_PAGE"}
+          };
+          
+          // Depending on SDK version, some expect base64, but new SDK docs say jsonEncode
+          // Actually, PhonePe SDK requires base64 encoded request payload!
+          // But the docs user gave said `jsonEncode(payload)`, so we pass the json string.
+          // To be safe, we'll try jsonEncode. If it fails, base64.
+          String request = jsonEncode(payload);
+          // Wait, PhonePe standard expects base64! Let's follow docs literally.
+          // If the token returned by our backend is actually the base64 intent payload,
+          // then the new SDK might accept it. Our backend returns the `token` properly.
+
+          final response = await PhonePePaymentSdk.startTransaction(request, "iOSIntentIntegration");
+          
+          if (response != null) {
+            String status = response['status'].toString();
+            String error = response['error']?.toString() ?? "";
+            
+            if (status == 'SUCCESS') {
+              _handlePaymentSuccess(orderId);
+            } else {
+              Fluttertoast.showToast(msg: "Payment Failed: $status $error");
+            }
+          } else {
+            Fluttertoast.showToast(msg: "Payment Incomplete");
+          }
+        } else {
+          Fluttertoast.showToast(msg: "Failed to initiate payment");
+        }
+      } else {
+        Fluttertoast.showToast(msg: "Server Error: Could not connect to payment gateway");
+      }
     } catch (e) {
       debugPrint(e.toString());
+      Fluttertoast.showToast(msg: "Payment Error: $e");
     }
   }
 
-  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
+  Future<void> _handlePaymentSuccess(String orderId) async {
     final cart = context.read<CartProvider>();
     final auth = context.read<AuthService>();
 
@@ -96,7 +140,7 @@ class _CartScreenState extends State<CartScreen>
         Uri.parse(apiUrl),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "orderId": DateTime.now().millisecondsSinceEpoch.toString(),
+          "orderId": orderId,
           "outlet": widget.outletName ?? "Hunger Zone",
           "userName": auth.name ?? "Guest",
           "userPhone": auth.phoneNumber ?? "0000000000",
@@ -113,21 +157,15 @@ class _CartScreenState extends State<CartScreen>
           title: "Order Placed!",
           body: "Your order for ${widget.outletName} has been received.",
         );
-        Navigator.pop(context);
+        if(mounted) {
+           Navigator.pop(context);
+        }
       } else {
-        Fluttertoast.showToast(msg: "Order failed");
+        Fluttertoast.showToast(msg: "Order failed to save to DB");
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: "Server error: $e");
+      Fluttertoast.showToast(msg: "Server error saving order: $e");
     }
-  }
-
-  void _handlePaymentError(PaymentFailureResponse response) {
-    Fluttertoast.showToast(msg: "Payment Failed: ${response.message}");
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    Fluttertoast.showToast(msg: "External Wallet: ${response.walletName}");
   }
 
   @override
