@@ -2,11 +2,18 @@ const axios = require('axios');
 const crypto = require('crypto');
 
 // Using standard PhonePe credentials structure
-// For production, these should be in .env
-const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID || 'PGTESTPAYUAT';
-const SALT_KEY = process.env.PHONEPE_SALT_KEY || '099eb0cd-02cf-4e2a-8aca-3e6c6aff0399';
-const SALT_INDEX = process.env.PHONEPE_SALT_INDEX || '1';
-const ENV = process.env.PHONEPE_ENV || 'SANDBOX'; // 'SANDBOX' or 'PRODUCTION'
+const MERCHANT_ID = (!process.env.PHONEPE_MERCHANT_ID || process.env.PHONEPE_MERCHANT_ID.includes('YOUR_')) 
+    ? 'PGTESTPAYUAT86' 
+    : process.env.PHONEPE_MERCHANT_ID;
+const SALT_KEY = (!process.env.PHONEPE_SALT_KEY || process.env.PHONEPE_SALT_KEY.includes('YOUR_')) 
+    ? '96434309-7796-489d-8924-ab56988a6076' 
+    : process.env.PHONEPE_SALT_KEY;
+const SALT_INDEX = (!process.env.PHONEPE_SALT_INDEX || process.env.PHONEPE_SALT_INDEX.includes('YOUR_')) 
+    ? '1' 
+    : process.env.PHONEPE_SALT_INDEX;
+const ENV = (process.env.PHONEPE_ENV === 'PRODUCTION' && !MERCHANT_ID.startsWith('PGTEST')) 
+    ? 'PRODUCTION' 
+    : 'SANDBOX';
 
 // PhonePe endpoints
 const PHONEPE_HOST = ENV === 'PRODUCTION' 
