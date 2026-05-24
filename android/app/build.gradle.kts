@@ -8,9 +8,6 @@ plugins {
 repositories {
     google()
     mavenCentral()
-    maven {
-        url = uri("https://phonepe.mycloudrepo.io/public/repositories/phonepe-intentsdk-android")
-    }
 }
 
 android {

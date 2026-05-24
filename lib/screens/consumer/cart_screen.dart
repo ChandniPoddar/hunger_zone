@@ -1,10 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hunger_zone/providers/cart_provider.dart';
 import 'package:hunger_zone/services/auth_service.dart';
 import 'package:provider/provider.dart';
-import 'package:phonepe_payment_sdk/phonepe_payment_sdk.dart';
+import 'package:flutter_upi_india/flutter_upi_india.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -26,10 +25,8 @@ class _CartScreenState extends State<CartScreen>
     with SingleTickerProviderStateMixin {
 
   late AnimationController _controller;
-  late Animation<double> _fade;
 
   final String apiUrl = "${AppConstants.baseUrl}/api/orders";
-  final String paymentInitUrl = "${AppConstants.baseUrl}/api/payment/phonepe/create-order";
 
   @override
   void initState() {
@@ -38,7 +35,6 @@ class _CartScreenState extends State<CartScreen>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
   }
 
@@ -48,75 +44,216 @@ class _CartScreenState extends State<CartScreen>
     super.dispose();
   }
 
-  Future<void> _openCheckout(double amount) async {
-    final auth = context.read<AuthService>();
+  Future<ApplicationMeta?> _showUpiAppSelector(
+      BuildContext context, double amount, List<ApplicationMeta> apps) {
+    return showModalBottomSheet<ApplicationMeta>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag Handle
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Header
+              Text(
+                "Select UPI Payment App",
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Choose an app to pay ₹${amount.toStringAsFixed(2)}",
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Divider(height: 1),
+              const SizedBox(height: 20),
+              // Apps Content
+              apps.isEmpty
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(height: 10),
+                        Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 64,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          "No UPI Apps Found",
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            "Please install Google Pay, PhonePe, Paytm, or any other UPI app to complete your payment.",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                    )
+                  : GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.95,
+                      ),
+                      itemCount: apps.length,
+                      itemBuilder: (context, index) {
+                        final appMeta = apps[index];
+                        return InkWell(
+                          onTap: () {
+                            Navigator.pop(context, appMeta);
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFBFBFB),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.grey.shade100,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: appMeta.iconImage(48),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  appMeta.upiApplication.getAppName(),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF1A1A2E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _startUpiTransaction(ApplicationMeta appMeta, double amount) async {
     try {
-      // 1. Get Token and Order Details from Backend
-      final res = await http.post(
-        Uri.parse(paymentInitUrl),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "amount": amount,
-          "userId": auth.phoneNumber ?? "USER123",
-          "mobileNumber": auth.phoneNumber ?? "9999999999"
-        })
+      final String transactionRef = "UPITXREF${DateTime.now().millisecondsSinceEpoch}";
+      
+      final UpiTransactionResponse response = await UpiPay.initiateTransaction(
+        amount: amount.toStringAsFixed(2),
+        app: appMeta.upiApplication,
+        receiverName: AppConstants.receiverName,
+        receiverUpiAddress: AppConstants.receiverUpiAddress,
+        transactionRef: transactionRef,
+        transactionNote: 'Order payment at Hunger Zone',
+        merchantCode: AppConstants.merchantCode.isEmpty ? null : AppConstants.merchantCode,
       );
 
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data['success'] == true) {
-          String token = data['token'];
-          String orderId = data['orderId'];
-          String merchantId = data['merchantId'];
-          String environment = data['environment']; // 'SANDBOX' or 'PRODUCTION'
+      debugPrint("UPI Response status: ${response.status}");
+      debugPrint("UPI Response raw: ${response.rawResponse}");
 
-          // 2. Initialize PhonePe SDK
-          bool isInitialized = await PhonePePaymentSdk.init(environment, merchantId, "HungerZoneFlow", false);
-          if (!isInitialized) {
-            Fluttertoast.showToast(msg: "Failed to initialize payment gateway");
-            return;
-          }
-
-          // 3. Start Transaction
-          Map<String, dynamic> payload = {
-            "orderId": orderId,
-            "merchantId": merchantId,
-            "token": token,
-            "paymentMode": {"type": "PAY_PAGE"}
-          };
-          
-          // Depending on SDK version, some expect base64, but new SDK docs say jsonEncode
-          // Actually, PhonePe SDK requires base64 encoded request payload!
-          // But the docs user gave said `jsonEncode(payload)`, so we pass the json string.
-          // To be safe, we'll try jsonEncode. If it fails, base64.
-          String request = jsonEncode(payload);
-          // Wait, PhonePe standard expects base64! Let's follow docs literally.
-          // If the token returned by our backend is actually the base64 intent payload,
-          // then the new SDK might accept it. Our backend returns the `token` properly.
-
-          final response = await PhonePePaymentSdk.startTransaction(request, "iOSIntentIntegration");
-          
-          if (response != null) {
-            String status = response['status'].toString();
-            String error = response['error']?.toString() ?? "";
-            
-            if (status == 'SUCCESS') {
-              _handlePaymentSuccess(orderId);
-            } else {
-              Fluttertoast.showToast(msg: "Payment Failed: $status $error");
-            }
-          } else {
-            Fluttertoast.showToast(msg: "Payment Incomplete");
-          }
-        } else {
-          Fluttertoast.showToast(msg: "Failed to initiate payment");
-        }
+      if (response.status == UpiTransactionStatus.success) {
+        _handlePaymentSuccess(transactionRef);
+      } else if (response.status == UpiTransactionStatus.submitted) {
+        Fluttertoast.showToast(msg: "Transaction Submitted. Check status in your bank app.");
       } else {
-        Fluttertoast.showToast(msg: "Server Error: Could not connect to payment gateway");
+        Fluttertoast.showToast(msg: "Payment Failed or Cancelled");
       }
     } catch (e) {
-      debugPrint(e.toString());
-      Fluttertoast.showToast(msg: "Payment Error: $e");
+      debugPrint("UPI Error: $e");
+      Fluttertoast.showToast(msg: "Transaction failed: $e");
+    }
+  }
+
+  Future<void> _openCheckout(double amount) async {
+    try {
+      // Show loading while fetching installed UPI apps
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B6B)),
+          ),
+        ),
+      );
+
+      final List<ApplicationMeta> appMetaList = await UpiPay.getInstalledUpiApplications();
+      
+      if (mounted) {
+        Navigator.pop(context); // Dismiss loader
+      }
+
+      final selectedApp = await _showUpiAppSelector(context, amount, appMetaList);
+      
+      if (selectedApp != null) {
+        await _startUpiTransaction(selectedApp, amount);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Dismiss loader if still open
+      }
+      debugPrint("Checkout Error: $e");
+      Fluttertoast.showToast(msg: "Error initializing payment: $e");
     }
   }
 

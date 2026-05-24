@@ -25,7 +25,7 @@ dependencies:
 #  cloud_firestore: ^6.1.2
   shared_preferences: ^2.3.5
   flutter_local_notifications: ^17.2.1+2
-  phonepe_payment_sdk: ^3.0.2
+  flutter_upi_india: ^1.0.1
 
 
 dev_dependencies:

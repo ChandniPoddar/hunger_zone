@@ -65,7 +65,6 @@ const User = mongoose.model("User", UserSchema);
 // Routes
 // -------------------
 app.use("/api/orders", require("./routes/orderRoutes"));
-app.use("/api/payment", require("./routes/paymentRoutes"));
 
 // -------------------
 // SMS Configuration (Twilio)

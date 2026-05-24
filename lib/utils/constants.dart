@@ -5,4 +5,7 @@ class AppConstants {
   static String razorpayKey = dotenv.env['RAZORPAY_KEY'] ?? 'rzp_test_SAodWBg2uq2dkh';
   static String defaultContact = dotenv.env['DEFAULT_CONTACT'] ?? '9876543210';
   static String defaultEmail = dotenv.env['DEFAULT_EMAIL'] ?? 'user@globaleats.com';
+  static String receiverUpiAddress = dotenv.env['RECEIVER_UPI_ADDRESS'] ?? 'receiver@upi';
+  static String receiverName = dotenv.env['RECEIVER_NAME'] ?? 'Hunger Zone Canteen';
+  static String merchantCode = dotenv.env['MERCHANT_CODE'] ?? '';
 }

@@ -30,9 +30,6 @@ dependencyResolutionManagement {
         maven {
             url = uri("https://storage.googleapis.com/download.flutter.io")
         }
-        maven {
-            url = uri("https://phonepe.mycloudrepo.io/public/repositories/phonepe-intentsdk-android")
-        }
     }
 }
 
