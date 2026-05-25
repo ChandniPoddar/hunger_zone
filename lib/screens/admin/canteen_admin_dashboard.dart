@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,7 @@ import '../../providers/outlet_provider.dart';
 import '../auth/login_screen.dart';
 import '../auth/add_item_screen.dart';
 import 'manage_items_screen.dart';
+import '../../services/notification_service.dart';
 
 class CanteenAdminDashboard extends StatefulWidget {
   const CanteenAdminDashboard({super.key});
@@ -22,6 +24,8 @@ class _CanteenAdminDashboardState extends State<CanteenAdminDashboard> with Tick
   List orders = [];
   bool loading = true;
   int _currentTab = 0;
+  Timer? _timer;
+  final Set<String> _knownOrderIds = {};
 
   final Color primaryCoral = const Color(0xFFFF6B6B);
   final Color greyBg = const Color(0xFFF2F2F2);
@@ -29,20 +33,55 @@ class _CanteenAdminDashboardState extends State<CanteenAdminDashboard> with Tick
   @override
   void initState() {
     super.initState();
-    fetchOrders();
+    fetchOrders(isFirstFetch: true);
+    _timer = Timer.periodic(const Duration(seconds: 10), (timer) => fetchOrders(isFirstFetch: false));
   }
 
-  Future<void> fetchOrders() async {
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> fetchOrders({bool isFirstFetch = false}) async {
     try {
       final response = await http.get(Uri.parse("${AppConstants.baseUrl}/api/orders/canteen"));
       if (response.statusCode == 200) {
-        setState(() {
-          orders = jsonDecode(response.body);
-          loading = false;
-        });
+        final List fetchedOrders = jsonDecode(response.body);
+        
+        if (isFirstFetch) {
+          for (var order in fetchedOrders) {
+            if (order['orderId'] != null) {
+              _knownOrderIds.add(order['orderId'].toString());
+            }
+          }
+        } else {
+          for (var order in fetchedOrders) {
+            final String? orderId = order['orderId']?.toString();
+            final String? status = order['status']?.toString();
+            if (orderId != null && status == "Pending" && !_knownOrderIds.contains(orderId)) {
+              _knownOrderIds.add(orderId);
+              // Trigger local notification to alert the operator
+              NotificationService.showNotification(
+                id: orderId.hashCode,
+                title: "New Order Alert! 🍔",
+                body: "Order #$orderId has been received. Total: ₹${order['total']}",
+              );
+            }
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            orders = fetchedOrders;
+            loading = false;
+          });
+        }
       }
     } catch (e) {
-      setState(() => loading = false);
+      if (mounted) {
+        setState(() => loading = false);
+      }
     }
   }
 
@@ -123,7 +162,9 @@ class _CanteenAdminDashboardState extends State<CanteenAdminDashboard> with Tick
                   icon: Icon(Icons.logout_rounded, color: primaryCoral),
                   onPressed: () async {
                     await context.read<AuthService>().logout();
-                    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
+                    if (context.mounted) {
+                      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
+                    }
                   },
                 ),
               ),

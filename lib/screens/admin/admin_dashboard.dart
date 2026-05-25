@@ -120,12 +120,13 @@ class _AdminDashboardState extends State<AdminDashboard>
                           icon: const Icon(Icons.logout, color: Color(0xFFFFD700)),
                           onPressed: () async {
                             await context.read<AuthService>().logout();
-                            if (!mounted) return;
-                            Navigator.pushAndRemoveUntil(
-                              context,
-                              MaterialPageRoute(builder: (_) => const LoginScreen()),
-                              (route) => false,
-                            );
+                            if (context.mounted) {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                (route) => false,
+                              );
+                            }
                           },
                         ),
                       )

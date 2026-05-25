@@ -45,5 +45,31 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>freecharge</string>
+		<string>gpay</string>
+		<string>in.fampay.app</string>
+		<string>lotza</string>
+		<string>mobikwik</string>
+		<string>paytm</string>
+		<string>phonepe</string>
+		<string>upi</string>
+		<string>upibillpay</string>
+		<string>whatsapp</string>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>iOSIntentIntegration</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>iOSIntentIntegration</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

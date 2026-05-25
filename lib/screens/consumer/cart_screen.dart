@@ -1,10 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hunger_zone/providers/cart_provider.dart';
 import 'package:hunger_zone/services/auth_service.dart';
 import 'package:provider/provider.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:flutter_upi_india/flutter_upi_india.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -25,58 +24,247 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen>
     with SingleTickerProviderStateMixin {
 
-  late Razorpay _razorpay;
   late AnimationController _controller;
-  late Animation<double> _fade;
 
-  final String razorpayKey = AppConstants.razorpayKey;
   final String apiUrl = "${AppConstants.baseUrl}/api/orders";
 
   @override
   void initState() {
     super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
   }
 
   @override
   void dispose() {
-    _razorpay.clear();
     _controller.dispose();
     super.dispose();
   }
 
-  void _openCheckout(double amount) {
-    var options = {
-      'key': razorpayKey,
-      'amount': (amount * 100).toInt(),
-      'name': widget.outletName ?? 'Hunger Zone',
-      'description': 'Payment for Order',
-      'prefill': {
-        'contact': AppConstants.defaultContact,
-        'email': AppConstants.defaultEmail
+  Future<ApplicationMeta?> _showUpiAppSelector(
+      BuildContext context, double amount, List<ApplicationMeta> apps) {
+    return showModalBottomSheet<ApplicationMeta>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(30),
+              topRight: Radius.circular(30),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.15),
+                blurRadius: 25,
+                offset: const Offset(0, -5),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Drag Handle
+              Container(
+                width: 42,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Header
+              Text(
+                "Select UPI Payment App",
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "Choose an app to pay ₹${amount.toStringAsFixed(2)}",
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Divider(height: 1),
+              const SizedBox(height: 20),
+              // Apps Content
+              apps.isEmpty
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(height: 10),
+                        Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 64,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          "No UPI Apps Found",
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            "Please install Google Pay, PhonePe, Paytm, BHIM, or any other UPI app to complete your payment.",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                    )
+                  : GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        childAspectRatio: 0.95,
+                      ),
+                      itemCount: apps.length,
+                      itemBuilder: (context, index) {
+                        final appMeta = apps[index];
+                        return InkWell(
+                          onTap: () {
+                            Navigator.pop(context, appMeta);
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFBFBFB),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.grey.shade100,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: appMeta.iconImage(48),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  appMeta.upiApplication.getAppName(),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF1A1A2E),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ],
+          ),
+        );
       },
-      'external': {
-        'wallets': ['paytm']
-      }
-    };
+    );
+  }
+
+  Future<void> _startUpiTransaction(ApplicationMeta appMeta, double amount) async {
     try {
-      _razorpay.open(options);
+      final String transactionRef = "UPITXREF${DateTime.now().millisecondsSinceEpoch}";
+      
+      final UpiTransactionResponse response = await UpiPay.initiateTransaction(
+        amount: amount.toStringAsFixed(2),
+        app: appMeta.upiApplication,
+        receiverName: AppConstants.receiverName,
+        receiverUpiAddress: AppConstants.receiverUpiAddress,
+        transactionRef: transactionRef,
+        transactionNote: 'Order payment at Hunger Zone',
+        merchantCode: AppConstants.merchantCode.isEmpty ? null : AppConstants.merchantCode,
+      );
+
+      debugPrint("UPI Response status: ${response.status}");
+      debugPrint("UPI Response raw: ${response.rawResponse}");
+
+      if (response.status == UpiTransactionStatus.success) {
+        await _handlePaymentSuccess(transactionRef);
+      } else if (response.status == UpiTransactionStatus.submitted) {
+        Fluttertoast.showToast(msg: "Transaction Submitted. Check status in your bank app.");
+      } else {
+        Fluttertoast.showToast(msg: "Payment Failed or Cancelled");
+      }
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint("UPI Error: $e");
+      Fluttertoast.showToast(msg: "Transaction failed: $e");
     }
   }
 
-  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
+  Future<void> _openCheckout(double amount) async {
+    final nav = Navigator.of(context);
+    final currentContext = context;
+
+    try {
+      // Show loading while fetching installed UPI apps
+      showDialog(
+        context: currentContext,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B6B)),
+          ),
+        ),
+      );
+
+      final List<ApplicationMeta> appMetaList =
+          await UpiPay.getInstalledUpiApplications();
+      
+      if (mounted) {
+        nav.pop(); // Dismiss loader
+      } else {
+        return;
+      }
+
+      if (!mounted) return;
+      final selectedApp = await _showUpiAppSelector(context, amount, appMetaList);
+      
+      if (selectedApp != null && mounted) {
+        await _startUpiTransaction(selectedApp, amount);
+      }
+    } catch (e) {
+      if (mounted) {
+        nav.pop(); // Dismiss loader if still open
+      }
+      debugPrint("Checkout Error: $e");
+      Fluttertoast.showToast(msg: "Error initializing payment: $e");
+    }
+  }
+
+  Future<void> _handlePaymentSuccess(String orderId) async {
     final cart = context.read<CartProvider>();
     final auth = context.read<AuthService>();
 
@@ -96,7 +284,7 @@ class _CartScreenState extends State<CartScreen>
         Uri.parse(apiUrl),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "orderId": DateTime.now().millisecondsSinceEpoch.toString(),
+          "orderId": orderId,
           "outlet": widget.outletName ?? "Hunger Zone",
           "userName": auth.name ?? "Guest",
           "userPhone": auth.phoneNumber ?? "0000000000",
@@ -113,21 +301,15 @@ class _CartScreenState extends State<CartScreen>
           title: "Order Placed!",
           body: "Your order for ${widget.outletName} has been received.",
         );
-        Navigator.pop(context);
+        if (mounted) {
+          Navigator.pop(context);
+        }
       } else {
-        Fluttertoast.showToast(msg: "Order failed");
+        Fluttertoast.showToast(msg: "Order failed to save to DB");
       }
     } catch (e) {
-      Fluttertoast.showToast(msg: "Server error: $e");
+      Fluttertoast.showToast(msg: "Server error saving order: $e");
     }
-  }
-
-  void _handlePaymentError(PaymentFailureResponse response) {
-    Fluttertoast.showToast(msg: "Payment Failed: ${response.message}");
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    Fluttertoast.showToast(msg: "External Wallet: ${response.walletName}");
   }
 
   @override

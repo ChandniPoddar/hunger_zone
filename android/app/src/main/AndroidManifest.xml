@@ -41,9 +41,33 @@
     </application>
 
     <queries>
+        <!-- Required for text processing -->
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+
+        <!-- UPI Intent — detects ANY app that handles upi:// scheme (Android 11+) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" android:host="pay" />
+        </intent>
+
+        <!-- Explicit package visibility for major UPI apps (Android 11+) -->
+        <package android:name="com.google.android.apps.nbu.paisa.user" />  <!-- Google Pay -->
+        <package android:name="com.phonepe.app" />                          <!-- PhonePe -->
+        <package android:name="net.one97.paytm" />                          <!-- Paytm -->
+        <package android:name="in.org.npci.upiapp" />                       <!-- BHIM -->
+        <package android:name="com.amazon.mShop.android.shopping" />        <!-- Amazon Pay -->
+        <package android:name="com.whatsapp" />                             <!-- WhatsApp Pay -->
+        <package android:name="com.mobikwik_new" />                         <!-- MobiKwik -->
+        <package android:name="com.freecharge.android" />                   <!-- Freecharge -->
+        <package android:name="com.dreamplug.androidapp" />                 <!-- CRED -->
+        <package android:name="in.fampay.app" />                            <!-- FamPay -->
+        <package android:name="com.upi.axispay" />                         <!-- Axis Pay -->
+        <package android:name="com.sbi.upi" />                              <!-- SBI Pay -->
+        <package android:name="com.ibl.upi" />                              <!-- IndusInd -->
+        <package android:name="com.bankofbaroda.upi" />                     <!-- BoB UPI -->
+        <package android:name="com.airtel.payments.bank" />                 <!-- Airtel Payments -->
     </queries>
 </manifest>
