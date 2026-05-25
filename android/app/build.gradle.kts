@@ -5,6 +5,11 @@ plugins {
     id("com.google.gms.google-services")
 }
 
+repositories {
+    google()
+    mavenCentral()
+}
+
 android {
     namespace = "com.example.ggi_canteen"
     compileSdk = 36
