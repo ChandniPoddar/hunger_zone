@@ -18,7 +18,7 @@ dependencies:
   google_fonts: ^8.0.0
   flutter_paypal: ^0.2.1
   cached_network_image: ^3.4.1
-  flutter_upi_india: ^1.0.1
+  upi_india: ^3.0.1
   image_picker: ^1.1.2
 #  firebase_core: ^4.4.0
 #  firebase_auth: ^6.1.4

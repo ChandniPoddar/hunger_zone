@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:hunger_zone/utils/constants.dart';
-import 'dart:convert';
 import 'dart:io';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
@@ -64,6 +63,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
       if (response.statusCode == 201) {
         Fluttertoast.showToast(msg: "Item Added Successfully!");
+        if (!context.mounted) return;
         Navigator.pop(context);
       } else {
         Fluttertoast.showToast(msg: "Failed to add item");
@@ -104,7 +104,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(25),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 8))
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 15, offset: const Offset(0, 8))
                 ],
               ),
               child: Column(
@@ -172,7 +172,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 8))
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 15, offset: const Offset(0, 8))
                   ],
                 ),
                 child: _selectedImage == null
@@ -181,7 +181,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(15),
-                            decoration: BoxDecoration(color: primaryColor.withOpacity(0.1), shape: BoxShape.circle),
+                            decoration: BoxDecoration(color: primaryColor.withValues(alpha: 0.1), shape: BoxShape.circle),
                             child: Icon(Icons.add_photo_alternate_outlined, size: 30, color: primaryColor),
                           ),
                           const SizedBox(height: 12),

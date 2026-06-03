@@ -75,7 +75,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
+                      color: primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.person_add_alt_1_rounded, size: 60, color: primaryColor),
@@ -109,7 +109,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                       borderRadius: BorderRadius.circular(25),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 20,
                           offset: const Offset(0, 10),
                         )
@@ -168,7 +168,8 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
 
                                     final String? error = await auth.requestOtp(phone);
 
-                                    if (error == null && mounted) {
+                                    if (!context.mounted) return;
+                                    if (error == null) {
                                       Fluttertoast.showToast(msg: "OTP sent to $phone");
                                       Navigator.push(
                                         context,
@@ -184,7 +185,7 @@ class _SignupScreenState extends State<SignupScreen> with SingleTickerProviderSt
                                           ),
                                         ),
                                       );
-                                    } else if (error != null) {
+                                    } else {
                                       Fluttertoast.showToast(msg: error);
                                     }
                                   },

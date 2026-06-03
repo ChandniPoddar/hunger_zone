@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/outlet_provider.dart';
 
@@ -121,40 +120,11 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
             child: CircleAvatar(
               radius: 18,
-              backgroundColor: const Color(0xFFFF4B4B).withOpacity(0.1),
+              backgroundColor: const Color(0xFFFF4B4B).withValues(alpha: 0.1),
               child: const Icon(Icons.person_rounded, color: Color(0xFFFF4B4B), size: 20),
             ),
           )
         ],
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(50),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            )
-          ],
-        ),
-        child: TextField(
-          decoration: InputDecoration(
-            hintText: "Search for 'Burgers' or 'Nescafe'...",
-            hintStyle: const TextStyle(color: Color(0xFFADB5BD), fontSize: 14),
-            prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFFFF4B4B)),
-            suffixIcon: const Icon(Icons.tune_rounded, color: Color(0xFFFF4B4B)),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-        ),
       ),
     );
   }
@@ -173,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, 4),
             )
@@ -184,8 +154,8 @@ class _HomeScreenState extends State<HomeScreen> {
             borderRadius: BorderRadius.circular(24),
             gradient: LinearGradient(
               colors: [
-                Colors.black.withOpacity(0.7),
-                Colors.black.withOpacity(0.1),
+                Colors.black.withValues(alpha: 0.7),
+                Colors.black.withValues(alpha: 0.1),
                 Colors.transparent,
               ],
               begin: Alignment.centerLeft,
@@ -271,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )
@@ -321,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 )
@@ -345,16 +315,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       Container(
                         height: 150,
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.6),
                           borderRadius: const BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
                         ),
                         child: Center(
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -422,7 +392,7 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onNavItemTapped,
-        indicatorColor: const Color(0xFFFF4B4B).withOpacity(0.1),
+        indicatorColor: const Color(0xFFFF4B4B).withValues(alpha: 0.1),
         destinations: [
           NavigationDestination(
             icon: Icon(Icons.home_rounded, color: _selectedIndex == 0 ? const Color(0xFFFF4B4B) : const Color(0xFFADB5BD)),
@@ -473,7 +443,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: const Color(0xFFFF4B4B).withOpacity(0.1), borderRadius: BorderRadius.circular(15)),
+                      decoration: BoxDecoration(color: const Color(0xFFFF4B4B).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(15)),
                       child: const Icon(Icons.restaurant_menu_rounded, color: Color(0xFFFF4B4B), size: 30),
                     ),
                     IconButton(
@@ -486,7 +456,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     CircleAvatar(
                       radius: 30,
-                      backgroundColor: const Color(0xFFFF4B4B).withOpacity(0.1),
+                      backgroundColor: const Color(0xFFFF4B4B).withValues(alpha: 0.1),
                       child: const Icon(Icons.person_rounded, color: Color(0xFFFF4B4B), size: 30),
                     ),
                     const SizedBox(width: 16),
@@ -555,7 +525,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Consumer<ThemeProvider>(
                   builder: (context, themeProvider, child) {
                     return SwitchListTile(
-                      activeColor: const Color(0xFFFF4B4B),
+                      activeThumbColor: const Color(0xFFFF4B4B),
                       secondary: Icon(
                         themeProvider.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
                         color: themeProvider.isDarkMode ? const Color(0xFFFFD700) : const Color(0xFFFF4B4B),
@@ -580,7 +550,7 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.all(24),
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFFF4B4B).withOpacity(0.05),
+                color: const Color(0xFFFF4B4B).withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: ListTile(
@@ -589,7 +559,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: const Text("Logout", style: TextStyle(color: Color(0xFFFF4B4B), fontWeight: FontWeight.bold)),
                 onTap: () async {
                   await authService.logout();
-                  if (!mounted) return;
+                  if (!context.mounted) return;
                   Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const OperatorUserScreen()), (_) => false);
                 },
               ),
@@ -606,7 +576,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFFFF4B4B).withOpacity(0.1) : Colors.transparent,
+        color: isSelected ? const Color(0xFFFF4B4B).withValues(alpha: 0.1) : Colors.transparent,
         borderRadius: BorderRadius.circular(15),
       ),
       child: ListTile(

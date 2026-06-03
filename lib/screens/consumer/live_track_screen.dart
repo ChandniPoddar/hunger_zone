@@ -19,7 +19,7 @@ class _LiveTrackScreenState extends State<LiveTrackScreen> {
   bool _loading = true;
   List _orders = [];
   Timer? _timer;
-  Map<String, String> _previousStatuses = {};
+  final Map<String, String> _previousStatuses = {};
 
   @override
   void initState() {
@@ -162,7 +162,7 @@ class _LiveTrackScreenState extends State<LiveTrackScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
+                        color: Colors.black.withValues(alpha: 0.03),
                         blurRadius: 15,
                         offset: const Offset(0, 5),
                       ),
@@ -185,7 +185,7 @@ class _LiveTrackScreenState extends State<LiveTrackScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1), 
+                               color: statusColor.withValues(alpha: 0.1), 
                               borderRadius: BorderRadius.circular(10)
                             ),
                             child: Text(

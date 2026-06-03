@@ -106,13 +106,14 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard> with TickerPr
     int pendingCount = orders.where((o) => o['status'] == 'Pending').length;
     int kitchenCount = orders.where((o) => o['status'] == 'Preparing' || o['status'] == 'Accepted').length;
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
         if (Navigator.canPop(context)) {
-          return true;
+          Navigator.pop(context);
         } else {
           SystemNavigator.pop();
-          return false;
         }
       },
       child: Scaffold(
@@ -177,9 +178,8 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard> with TickerPr
                   icon: Icon(Icons.logout_rounded, color: primaryCoral),
                   onPressed: () async {
                     await context.read<AuthService>().logout();
-                    if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
-                    }
+                    if (!context.mounted) return;
+                    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
                   },
                 ),
               ),
@@ -216,7 +216,7 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard> with TickerPr
                 Switch(
                   value: isOpen,
                   onChanged: (val) => outletProvider.toggleStatus('Fruit Corner'),
-                  activeColor: Colors.green,
+                  activeThumbColor: Colors.green,
                 ),
               ],
             );
@@ -251,14 +251,14 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard> with TickerPr
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 5))],
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 5))],
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(height: 10),
@@ -313,8 +313,8 @@ class _FruitAdminDashboardState extends State<FruitAdminDashboard> with TickerPr
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(25),
-        border: Border.all(color: Colors.black.withOpacity(0.05)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 8))],
+        border: Border.all(color: Colors.black.withValues(alpha: 0.05)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 15, offset: const Offset(0, 8))],
       ),
       child: Column(
         children: [

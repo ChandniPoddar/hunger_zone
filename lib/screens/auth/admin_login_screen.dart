@@ -120,7 +120,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with SingleTickerPr
                     borderRadius: BorderRadius.circular(25),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       )

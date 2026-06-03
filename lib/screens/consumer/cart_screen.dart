@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hunger_zone/providers/cart_provider.dart';
 import 'package:hunger_zone/services/auth_service.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_upi_india/flutter_upi_india.dart';
+import 'package:upi_india/upi_india.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -27,6 +27,7 @@ class _CartScreenState extends State<CartScreen>
   late AnimationController _controller;
 
   final String apiUrl = "${AppConstants.baseUrl}/api/orders";
+  final UpiIndia _upiIndia = UpiIndia();
 
   @override
   void initState() {
@@ -44,9 +45,9 @@ class _CartScreenState extends State<CartScreen>
     super.dispose();
   }
 
-  Future<ApplicationMeta?> _showUpiAppSelector(
-      BuildContext context, double amount, List<ApplicationMeta> apps) {
-    return showModalBottomSheet<ApplicationMeta>(
+  Future<UpiApp?> _showUpiAppSelector(
+      BuildContext context, double amount, List<UpiApp> apps) {
+    return showModalBottomSheet<UpiApp>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
@@ -60,7 +61,7 @@ class _CartScreenState extends State<CartScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: Colors.black.withValues(alpha: 0.15),
                 blurRadius: 25,
                 offset: const Offset(0, -5),
               ),
@@ -167,11 +168,15 @@ class _CartScreenState extends State<CartScreen>
                               children: [
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(12),
-                                  child: appMeta.iconImage(48),
+                                  child: Image.memory(
+                                    appMeta.icon,
+                                    width: 48,
+                                    height: 48,
+                                  ),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  appMeta.upiApplication.getAppName(),
+                                  appMeta.name,
                                   textAlign: TextAlign.center,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -194,26 +199,26 @@ class _CartScreenState extends State<CartScreen>
     );
   }
 
-  Future<void> _startUpiTransaction(ApplicationMeta appMeta, double amount) async {
+  Future<void> _startUpiTransaction(UpiApp appMeta, double amount) async {
     try {
       final String transactionRef = "UPITXREF${DateTime.now().millisecondsSinceEpoch}";
       
-      final UpiTransactionResponse response = await UpiPay.initiateTransaction(
-        amount: amount.toStringAsFixed(2),
-        app: appMeta.upiApplication,
+      final UpiResponse response = await _upiIndia.startTransaction(
+        app: appMeta,
+        receiverUpiId: AppConstants.receiverUpiAddress,
         receiverName: AppConstants.receiverName,
-        receiverUpiAddress: AppConstants.receiverUpiAddress,
-        transactionRef: transactionRef,
+        transactionRefId: transactionRef,
         transactionNote: 'Order payment at Hunger Zone',
-        merchantCode: AppConstants.merchantCode.isEmpty ? null : AppConstants.merchantCode,
+        amount: amount,
+        merchantId: AppConstants.merchantCode.isEmpty ? null : AppConstants.merchantCode,
       );
 
       debugPrint("UPI Response status: ${response.status}");
-      debugPrint("UPI Response raw: ${response.rawResponse}");
+      debugPrint("UPI Response approvalRef: ${response.approvalRefNo}");
 
-      if (response.status == UpiTransactionStatus.success) {
+      if (response.status == UpiPaymentStatus.SUCCESS) {
         await _handlePaymentSuccess(transactionRef);
-      } else if (response.status == UpiTransactionStatus.submitted) {
+      } else if (response.status == UpiPaymentStatus.SUBMITTED) {
         Fluttertoast.showToast(msg: "Transaction Submitted. Check status in your bank app.");
       } else {
         Fluttertoast.showToast(msg: "Payment Failed or Cancelled");
@@ -240,8 +245,8 @@ class _CartScreenState extends State<CartScreen>
         ),
       );
 
-      final List<ApplicationMeta> appMetaList =
-          await UpiPay.getInstalledUpiApplications();
+      final List<UpiApp> appMetaList =
+          await _upiIndia.getAllUpiApps();
       
       if (mounted) {
         nav.pop(); // Dismiss loader
@@ -381,7 +386,7 @@ class _CartScreenState extends State<CartScreen>
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 4))
                         ],
                       ),
                       child: Row(

@@ -71,7 +71,7 @@ class _ProductListScreenState extends State<ProductListScreen> with SingleTicker
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.black, Colors.transparent, Colors.black.withOpacity(0.8)],
+                          colors: [Colors.black, Colors.transparent, Colors.black.withValues(alpha: 0.8)],
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                         ),

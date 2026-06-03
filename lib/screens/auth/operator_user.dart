@@ -63,9 +63,9 @@ class _OperatorUserScreenState extends State<OperatorUserScreen> with TickerProv
                   Container(
                     padding: const EdgeInsets.all(25),
                     decoration: BoxDecoration(
-                      color: primaryColor.withOpacity(0.1),
+                      color: primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
-                      border: Border.all(color: primaryColor.withOpacity(0.5), width: 2),
+                      border: Border.all(color: primaryColor.withValues(alpha: 0.5), width: 2),
                     ),
                     child: Icon(
                       Icons.restaurant_rounded,
@@ -148,10 +148,10 @@ class _OperatorUserScreenState extends State<OperatorUserScreen> with TickerProv
             backgroundColor: isFilled ? primaryColor : Colors.white,
             foregroundColor: isFilled ? Colors.white : primaryColor,
             elevation: isFilled ? 5 : 0,
-            shadowColor: primaryColor.withOpacity(0.5),
+            shadowColor: primaryColor.withValues(alpha: 0.5),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(15),
-              side: isFilled ? BorderSide.none : BorderSide(color: primaryColor.withOpacity(0.5), width: 1.5),
+              side: isFilled ? BorderSide.none : BorderSide(color: primaryColor.withValues(alpha: 0.5), width: 1.5),
             ),
           ),
           child: Row(

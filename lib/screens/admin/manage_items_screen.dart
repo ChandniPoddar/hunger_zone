@@ -151,7 +151,7 @@ class _ManageItemsScreenState extends State<ManageItemsScreen> {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
+                              color: Colors.black.withValues(alpha: 0.04),
                               blurRadius: 15,
                               offset: const Offset(0, 6),
                             )
@@ -210,7 +210,7 @@ class _ManageItemsScreenState extends State<ManageItemsScreen> {
                                         decoration: BoxDecoration(
                                           color: Colors.white,
                                           shape: BoxShape.circle,
-                                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
+                                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)],
                                         ),
                                         child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFFF6B6B), size: 18),
                                       ),
@@ -257,8 +257,8 @@ class _ManageItemsScreenState extends State<ManageItemsScreen> {
                                             child: Switch(
                                               value: isAvailable,
                                               onChanged: (val) => toggleAvailability(item['_id'], val),
-                                              activeColor: const Color(0xFF28A745),
-                                              activeTrackColor: const Color(0xFF28A745).withOpacity(0.3),
+                                              activeThumbColor: const Color(0xFF28A745),
+                                              activeTrackColor: const Color(0xFF28A745).withValues(alpha: 0.3),
                                               inactiveThumbColor: Colors.white,
                                               inactiveTrackColor: Colors.grey.shade300,
                                             ),
