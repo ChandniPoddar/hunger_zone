@@ -51,7 +51,19 @@ const MONGO_URI =
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log('✅ MongoDB Atlas Connected'))
+  .then(async () => {
+    console.log('✅ MongoDB Atlas Connected');
+    try {
+      const userCollection = mongoose.connection.collection('users');
+      const indexes = await userCollection.indexes();
+      if (indexes.some((i) => i.name === 'phoneNumber_1')) {
+        await userCollection.dropIndex('phoneNumber_1');
+        console.log('🧹 Cleaned up legacy phoneNumber_1 index');
+      }
+    } catch (err) {
+      // Ignore if index doesn't exist
+    }
+  })
   .catch((error) => {
     console.error('❌ MongoDB connection error:', error);
     process.exit(1);
