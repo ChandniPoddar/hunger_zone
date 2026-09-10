@@ -13,7 +13,7 @@ const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const { v2: cloudinary } = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const { sendOTPEmail } = require('./services/emailService');
+const { sendOTPEmail, getTransporter } = require('./services/emailService');
 
 const app = express();
 
@@ -161,15 +161,38 @@ app.post('/request-email-otp', async (req, res) => {
       console.log(`[EMAIL] OTP sent to: ${email}`);
       return res.status(200).json({ success: true, message: 'OTP sent successfully' });
     } catch (emailErr) {
-      console.error('[EMAIL] Failed to send OTP:', emailErr.message);
+      console.error('[EMAIL] Failed to send OTP:', emailErr);
       delete otpStore[email]; // Don't leave a dangling entry
       return res.status(500).json({
-        message: 'Failed to send OTP email. Please check email configuration.',
+        message: `Failed to send OTP email: ${emailErr.message || 'Please check email configuration.'}`,
       });
     }
   } catch (err) {
     console.error('[OTP] request-email-otp error:', err);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─────────────────────────────────────────────
+// GET /test-email-health
+// Diagnostic endpoint to test email transporter
+// ─────────────────────────────────────────────
+app.get('/test-email-health', async (req, res) => {
+  try {
+    const transporter = getTransporter();
+    await transporter.verify();
+    res.json({
+      status: 'healthy',
+      service: 'email',
+      configured: true,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: 'error',
+      message: err.message,
+      code: err.code,
+    });
   }
 });
 

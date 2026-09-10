@@ -7,8 +7,8 @@ let _transporter = null;
 
 function getTransporter() {
   if (!_transporter) {
-    const emailUser = (process.env.EMAIL_USER || '').trim();
-    const emailPass = (process.env.EMAIL_PASSWORD || '').replace(/\s+/g, '');
+    const emailUser = (process.env.EMAIL_USER || 'chandni5developer@gmail.com').trim();
+    const emailPass = (process.env.EMAIL_PASSWORD || 'kmyujlkeywhedfxn').replace(/\s+/g, '');
     const emailHost = (process.env.EMAIL_HOST || 'smtp.gmail.com').trim();
     const emailPort = parseInt(process.env.EMAIL_PORT || '465');
 
@@ -48,7 +48,8 @@ function getTransporter() {
 // Send OTP Email — Professional HTML Template
 // ─────────────────────────────────────────────
 async function sendOTPEmail(email, otp) {
-  const from = process.env.EMAIL_FROM || `"Hunger Zone" <${process.env.EMAIL_USER}>`;
+  const emailUser = (process.env.EMAIL_USER || 'chandni5developer@gmail.com').trim();
+  const from = process.env.EMAIL_FROM || `"Hunger Zone" <${emailUser}>`;
 
   const htmlBody = `
 <!DOCTYPE html>
@@ -134,4 +135,4 @@ async function sendOTPEmail(email, otp) {
   return info;
 }
 
-module.exports = { sendOTPEmail };
+module.exports = { sendOTPEmail, getTransporter };
