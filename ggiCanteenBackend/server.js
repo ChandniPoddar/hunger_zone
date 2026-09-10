@@ -179,19 +179,29 @@ app.post('/request-email-otp', async (req, res) => {
 // ─────────────────────────────────────────────
 app.get('/test-email-health', async (req, res) => {
   try {
+    if (process.env.RESEND_API_KEY) {
+      return res.json({ status: 'healthy', provider: 'resend_https', port: 443 });
+    }
+    if (process.env.BREVO_API_KEY) {
+      return res.json({ status: 'healthy', provider: 'brevo_https', port: 443 });
+    }
     const transporter = getTransporter();
     await transporter.verify();
     res.json({
       status: 'healthy',
-      service: 'email',
+      provider: 'smtp',
       configured: true,
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
     res.status(500).json({
       status: 'error',
+      provider: 'smtp',
       message: err.message,
       code: err.code,
+      hint: err.code === 'ETIMEDOUT'
+        ? 'Render Free Tier blocks outbound SMTP ports 25, 465, and 587. To send emails on Render Free Tier, add RESEND_API_KEY or BREVO_API_KEY to Render Environment variables, or upgrade to a paid Render service.'
+        : undefined,
     });
   }
 });

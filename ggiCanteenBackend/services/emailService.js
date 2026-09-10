@@ -121,6 +121,54 @@ async function sendOTPEmail(email, otp) {
 </html>
   `;
 
+  // 1. Resend HTTPS API (Port 443 — Bypasses cloud SMTP port blocking)
+  if (process.env.RESEND_API_KEY) {
+    console.log('[EMAIL] Sending via Resend HTTPS API (port 443)...');
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM || 'Hunger Zone <onboarding@resend.dev>',
+        to: [email],
+        subject: 'Hunger Zone — Your Verification OTP',
+        html: htmlBody,
+        text: `Your Hunger Zone verification OTP is: ${otp}\n\nThis OTP is valid for 5 minutes.\n\nRegards,\nHunger Zone`,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Resend Error: ${data.message || JSON.stringify(data)}`);
+    console.log(`[EMAIL] OTP sent successfully via Resend to ${email} — ID: ${data.id}`);
+    return { messageId: data.id };
+  }
+
+  // 2. Brevo HTTPS API (Port 443 — Bypasses cloud SMTP port blocking)
+  if (process.env.BREVO_API_KEY) {
+    console.log('[EMAIL] Sending via Brevo HTTPS API (port 443)...');
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': process.env.BREVO_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: 'Hunger Zone', email: emailUser },
+        to: [{ email }],
+        subject: 'Hunger Zone — Your Verification OTP',
+        htmlContent: htmlBody,
+        textContent: `Your Hunger Zone verification OTP is: ${otp}\n\nThis OTP is valid for 5 minutes.\n\nRegards,\nHunger Zone`,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Brevo Error: ${data.message || JSON.stringify(data)}`);
+    console.log(`[EMAIL] OTP sent successfully via Brevo to ${email} — ID: ${data.messageId}`);
+    return { messageId: data.messageId };
+  }
+
+  // 3. Nodemailer SMTP (Local development, Paid instances, VPS)
+  console.log('[EMAIL] Sending via SMTP...');
   const mailOptions = {
     from,
     to: email,
