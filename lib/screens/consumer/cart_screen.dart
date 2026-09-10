@@ -201,16 +201,28 @@ class _CartScreenState extends State<CartScreen>
 
   Future<void> _startUpiTransaction(UpiApp appMeta, double amount) async {
     try {
-      final String transactionRef = "UPITXREF${DateTime.now().millisecondsSinceEpoch}";
+      final String transactionRef = "UPI${DateTime.now().millisecondsSinceEpoch}";
       
+      // Personal VPAs (like @oksbi, @okaxis, @okhdfcbank, @ybl, etc.) must NEVER have a merchantId
+      final bool isPersonalVpa = AppConstants.receiverUpiAddress.contains('@oksbi') ||
+          AppConstants.receiverUpiAddress.contains('@okaxis') ||
+          AppConstants.receiverUpiAddress.contains('@okhdfcbank') ||
+          AppConstants.receiverUpiAddress.contains('@okicici') ||
+          AppConstants.receiverUpiAddress.contains('@ybl') ||
+          AppConstants.receiverUpiAddress.contains('@ibl') ||
+          AppConstants.receiverUpiAddress.contains('@paytm') ||
+          AppConstants.merchantCode.isEmpty;
+
+      final String? merchantId = isPersonalVpa ? null : AppConstants.merchantCode;
+
       final UpiResponse response = await _upiIndia.startTransaction(
         app: appMeta,
-        receiverUpiId: AppConstants.receiverUpiAddress,
-        receiverName: AppConstants.receiverName,
+        receiverUpiId: AppConstants.receiverUpiAddress.trim(),
+        receiverName: AppConstants.receiverName.trim(),
         transactionRefId: transactionRef,
-        transactionNote: 'Order payment at Hunger Zone',
+        transactionNote: 'Hunger Zone Order',
         amount: amount,
-        merchantId: AppConstants.merchantCode.isEmpty ? null : AppConstants.merchantCode,
+        merchantId: merchantId,
       );
 
       debugPrint("UPI Response status: ${response.status}");
