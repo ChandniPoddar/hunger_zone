@@ -12,7 +12,6 @@ import '../../providers/outlet_provider.dart';
 import '../auth/login_screen.dart';
 import '../auth/add_item_screen.dart';
 import 'manage_items_screen.dart';
-import '../../services/notification_service.dart';
 
 class LiptonAdminDashboard extends StatefulWidget {
   const LiptonAdminDashboard({super.key});
@@ -26,15 +25,14 @@ class _LiptonAdminDashboardState extends State<LiptonAdminDashboard> with Ticker
   bool loading = true;
   int _currentTab = 0;
   Timer? _timer;
-  final Set<String> _knownOrderIds = {};
 
   final Color primaryCoral = const Color(0xFFFF6B6B);
 
   @override
   void initState() {
     super.initState();
-    fetchOrders(isFirstFetch: true);
-    _timer = Timer.periodic(const Duration(seconds: 10), (timer) => fetchOrders(isFirstFetch: false));
+    fetchOrders();
+    _timer = Timer.periodic(const Duration(seconds: 60), (timer) => fetchOrders());
   }
 
   @override
@@ -43,34 +41,11 @@ class _LiptonAdminDashboardState extends State<LiptonAdminDashboard> with Ticker
     super.dispose();
   }
 
-  Future<void> fetchOrders({bool isFirstFetch = false}) async {
+  Future<void> fetchOrders() async {
     try {
       final response = await http.get(Uri.parse("${AppConstants.baseUrl}/api/orders/lipton"));
       if (response.statusCode == 200) {
         final List fetchedOrders = jsonDecode(response.body);
-        
-        if (isFirstFetch) {
-          for (var order in fetchedOrders) {
-            if (order['orderId'] != null) {
-              _knownOrderIds.add(order['orderId'].toString());
-            }
-          }
-        } else {
-          for (var order in fetchedOrders) {
-            final String? orderId = order['orderId']?.toString();
-            final String? status = order['status']?.toString();
-            if (orderId != null && status == "Pending" && !_knownOrderIds.contains(orderId)) {
-              _knownOrderIds.add(orderId);
-              // Trigger local notification to alert the operator
-              NotificationService.showNotification(
-                id: orderId.hashCode,
-                title: "New Order Alert! 🍔",
-                body: "Order #$orderId has been received. Total: ₹${order['total']}",
-              );
-            }
-          }
-        }
-
         if (mounted) {
           setState(() {
             orders = fetchedOrders;

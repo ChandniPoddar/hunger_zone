@@ -16,22 +16,27 @@ class _OperatorUserScreenState extends State<OperatorUserScreen> with TickerProv
   late AnimationController _buttonController;
   late Animation<double> _scaleAnimation;
 
-  final Color primaryColor = const Color(0xFFFF6B6B);
+  // Consistent Brand Colors
+  static const Color primaryCoral = Color(0xFFFF5252);
+  static const Color primaryOrange = Color(0xFFFF7A59);
+  static const Color darkNavy = Color(0xFF0F172A);
+  static const Color lightBg = Color(0xFFF8FAFC);
+  static const Color textMuted = Color(0xFF64748B);
 
   @override
   void initState() {
     super.initState();
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 900),
     );
-    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeIn);
+    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic);
 
     _buttonController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.94, end: 1.0).animate(
       CurvedAnimation(parent: _buttonController, curve: Curves.easeOutBack),
     );
 
@@ -49,78 +54,228 @@ class _OperatorUserScreenState extends State<OperatorUserScreen> with TickerProv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: lightBg,
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo/Icon
+                  // Brand Icon Container
                   Container(
-                    padding: const EdgeInsets.all(25),
+                    width: 96,
+                    height: 96,
                     decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.1),
+                      gradient: const LinearGradient(
+                        colors: [primaryCoral, primaryOrange],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       shape: BoxShape.circle,
-                      border: Border.all(color: primaryColor.withValues(alpha: 0.5), width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: primaryCoral.withValues(alpha: 0.28),
+                          blurRadius: 24,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
-                    child: Icon(
-                      Icons.restaurant_rounded,
-                      size: 70,
-                      color: primaryColor,
+                    child: const Center(
+                      child: Icon(
+                        Icons.restaurant_rounded,
+                        size: 48,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 50),
+                  const SizedBox(height: 32),
 
+                  // Title
                   Text(
                     "HUNGER ZONE",
                     style: GoogleFonts.poppins(
-                      color: primaryColor,
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.5,
+                      color: darkNavy,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 2,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Choose your portal to excellence",
+                    "Welcome! Select your portal to continue",
                     textAlign: TextAlign.center,
                     style: GoogleFonts.poppins(
-                      color: Colors.black45,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      color: textMuted,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
                     ),
                   ),
-                  const SizedBox(height: 60),
+                  const SizedBox(height: 48),
 
-                  // 1. User Login Button
-                  _buildButton(
-                    title: "LOGIN FOR USER",
-                    icon: Icons.person_outline_rounded,
-                    isFilled: false,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
-                    },
+                  // 1. Consumer / Student Portal
+                  ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [primaryCoral, primaryOrange],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primaryCoral.withValues(alpha: 0.32),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.person_outline_rounded, color: Colors.white, size: 24),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Student / Consumer",
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      Text(
+                                        "Order food & live tracking",
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white.withValues(alpha: 0.85),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
 
-                  // 2. Operator Login Button
-                  _buildButton(
-                    title: "LOGIN FOR OPERATOR",
-                    icon: Icons.admin_panel_settings_outlined,
-                    isFilled: true,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
-                      );
-                    },
+                  // 2. Operator / Admin Portal
+                  ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 14,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: darkNavy.withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(Icons.admin_panel_settings_outlined, color: darkNavy, size: 24),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Canteen Staff / Admin",
+                                        style: GoogleFonts.poppins(
+                                          color: darkNavy,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      Text(
+                                        "Manage incoming outlet orders",
+                                        style: GoogleFonts.poppins(
+                                          color: textMuted,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Icon(Icons.arrow_forward_ios_rounded, color: textMuted, size: 16),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  // Footer Info
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.verified_user_outlined, size: 16, color: textMuted),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Secure Email OTP & JWT Authentication",
+                        style: GoogleFonts.poppins(
+                          color: textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -130,48 +285,4 @@ class _OperatorUserScreenState extends State<OperatorUserScreen> with TickerProv
       ),
     );
   }
-
-  Widget _buildButton({
-    required String title,
-    required IconData icon,
-    required VoidCallback onTap,
-    bool isFilled = false,
-  }) {
-    return ScaleTransition(
-      scale: _scaleAnimation,
-      child: SizedBox(
-        width: double.infinity,
-        height: 60,
-        child: ElevatedButton(
-          onPressed: onTap,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isFilled ? primaryColor : Colors.white,
-            foregroundColor: isFilled ? Colors.white : primaryColor,
-            elevation: isFilled ? 5 : 0,
-            shadowColor: primaryColor.withValues(alpha: 0.5),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-              side: isFilled ? BorderSide.none : BorderSide(color: primaryColor.withValues(alpha: 0.5), width: 1.5),
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 20),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
-

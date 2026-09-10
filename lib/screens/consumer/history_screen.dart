@@ -25,16 +25,26 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Future<void> _fetchMyOrders() async {
     final auth = context.read<AuthService>();
-    final phone = auth.phoneNumber;
-    if (phone == null) {
+    final userEmail = auth.email ?? auth.phoneNumber;
+    if (userEmail == null || userEmail.isEmpty) {
       if (mounted) setState(() => _loading = false);
       return;
     }
 
     try {
-      final res = await http.get(
-        Uri.parse("${AppConstants.baseUrl}/api/orders/user/$phone"),
+      final encodedEmail = Uri.encodeComponent(userEmail.toLowerCase().trim());
+      var res = await http.get(
+        Uri.parse("${AppConstants.baseUrl}/api/orders/user/email/$encodedEmail"),
       );
+
+      if (res.statusCode != 200 || json.decode(res.body).isEmpty) {
+        final legacyRes = await http.get(
+          Uri.parse("${AppConstants.baseUrl}/api/orders/user/$encodedEmail"),
+        );
+        if (legacyRes.statusCode == 200 && json.decode(legacyRes.body).isNotEmpty) {
+          res = legacyRes;
+        }
+      }
       if (res.statusCode == 200) {
         if (mounted) {
           setState(() {

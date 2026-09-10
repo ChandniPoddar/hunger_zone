@@ -36,6 +36,19 @@ subprojects {
                 it.namespace = "com.fix.namespace.${project.name.replace("-", "_").replace(":", ".")}"
             }
             
+            // Fix legacy compileSdkVersion in build.gradle if present
+            val buildGradleFile = project.file("build.gradle")
+            if (buildGradleFile.exists()) {
+                try {
+                    val bgText = buildGradleFile.readText()
+                    if (bgText.contains("compileSdkVersion 30")) {
+                        buildGradleFile.writeText(bgText.replace("compileSdkVersion 30", "compileSdkVersion 34"))
+                    }
+                } catch (e: Exception) {
+                    // Skip if locked
+                }
+            }
+            
             // 3. Safely handle legacy manifest issues
             val manifestFile = project.file("src/main/AndroidManifest.xml")
             if (manifestFile.exists()) {
@@ -47,6 +60,21 @@ subprojects {
                     }
                 } catch (e: Exception) {
                     // Skip if file is locked or inaccessible
+                }
+            }
+
+            // 4. Safely handle removed PluginRegistry.Registrar in legacy plugins (Flutter 3.29+)
+            val srcDir = project.file("src/main/java")
+            if (srcDir.exists()) {
+                srcDir.walkTopDown().filter { it.extension == "java" }.forEach { javaFile ->
+                    try {
+                        val text = javaFile.readText()
+                        if (text.contains("import io.flutter.plugin.common.PluginRegistry.Registrar;")) {
+                            javaFile.writeText(text.replace("import io.flutter.plugin.common.PluginRegistry.Registrar;", "// import io.flutter.plugin.common.PluginRegistry.Registrar;"))
+                        }
+                    } catch (e: Exception) {
+                        // Skip if file is locked or inaccessible
+                    }
                 }
             }
         }

@@ -5,340 +5,438 @@ if (fs.existsSync('.env')) {
 } else if (fs.existsSync('../.env')) {
   require('dotenv').config({ path: '../.env' });
 }
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-const multer = require("multer");
-const { v2: cloudinary } = require("cloudinary");
-const { CloudinaryStorage } = require("multer-storage-cloudinary");
+
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const multer = require('multer');
+const bcrypt = require('bcryptjs');
+const { v2: cloudinary } = require('cloudinary');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { sendOTPEmail } = require('./services/emailService');
+
 const app = express();
 
+// ─────────────────────────────────────────────
+// Cloudinary Config
+// ─────────────────────────────────────────────
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dgbizoren',
   api_key: process.env.CLOUDINARY_API_KEY || '926861566916778',
-  api_secret: process.env.CLOUDINARY_API_SECRET || 'LmWNHNJn_iJbAbEE_q7u4EaqGyM'
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'LmWNHNJn_iJbAbEE_q7u4EaqGyM',
 });
 
-// Multer Cloudinary settings
 const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
+  cloudinary,
   params: {
-    folder: "canteen_items",
-    allowedFormats: ["jpg", "jpeg", "png", "webp"]
-  }
+    folder: 'canteen_items',
+    allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
+  },
 });
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
+// ─────────────────────────────────────────────
 // Middleware
+// ─────────────────────────────────────────────
 app.use(express.json());
 app.use(cors());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// -------------------
-// MongoDB Atlas Connection
-// -------------------
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://poddarchandni5_db_user:v2Mx8g9NM6LWtZ7z@cluster0.05shl0n.mongodb.net/ggiCanteen?retryWrites=true&w=majority";
+// ─────────────────────────────────────────────
+// MongoDB Connection
+// ─────────────────────────────────────────────
+const MONGO_URI =
+  process.env.MONGO_URI ||
+  'mongodb+srv://poddarchandni5_db_user:v2Mx8g9NM6LWtZ7z@cluster0.05shl0n.mongodb.net/ggiCanteen?retryWrites=true&w=majority';
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB Atlas Connected"))
+  .then(() => console.log('✅ MongoDB Atlas Connected'))
   .catch((error) => {
-    console.error("❌ MongoDB connection error:", error);
+    console.error('❌ MongoDB connection error:', error);
     process.exit(1);
   });
 
-// -------------------
-// Mongoose User Schema (Updated to match Flutter)
-// -------------------
-const UserSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  phoneNumber: { type: String, required: true, unique: true }, // Replaced email with phoneNumber
-  password: { type: String, required: true },
-  role: { type: String, default: "user" },
-  outletName: { type: String, default: null }, // Useful for admins/operators
-  lastVerified: { type: Date, default: Date.now } // Track daily verification for operators
-});
+// ─────────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────────
+const User = require('./models/User');
 
-const User = mongoose.model("User", UserSchema);
-
-// -------------------
-// Routes
-// -------------------
-app.use("/api/orders", require("./routes/orderRoutes"));
-
-// -------------------
-// SMS Configuration (Twilio)
-// -------------------
-const twilio = require('twilio');
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-
-let client;
-if (accountSid && authToken) {
-  client = twilio(accountSid, authToken);
-}
-
-// Simplified OTP Store
-const otpStore = {};
-
-// 1a. Request OTP
-app.post("/request-otp", async (req, res) => {
-  try {
-    const { phoneNumber } = req.body;
-    if (!phoneNumber) return res.status(400).json({ message: "Phone number required" });
-
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    otpStore[phoneNumber] = { otp, expires: Date.now() + 300000 }; // 5 mins
-    
-    console.log(`Generating OTP for ${phoneNumber}: ${otp}`);
-
-    if (client && twilioPhone) {
-      try {
-        await client.messages.create({
-          body: `Your Hunger Zone verification code is ${otp}`,
-          from: twilioPhone,
-          to: phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}` // Assuming India if no prefix
-        });
-        console.log(`Real SMS sent to ${phoneNumber}`);
-        return res.status(200).json({ message: "OTP sent successfully via SMS" });
-      } catch (err) {
-        console.error("Twilio error full object:", JSON.stringify(err, null, 2));
-        console.error("Twilio error message:", err.message);
-        return res.status(500).json({ 
-          message: "Error sending SMS. Please check Twilio setup.",
-          error: err.message,
-          code: err.code 
-        });
-      }
-    } else {
-      console.log(`Mock OTP (use this for testing): ${otp}`);
-      return res.status(200).json({ message: "OTP sent successfully (Mock)", otp }); 
-    }
-  } catch (err) {
-    console.error("Request OTP error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-
-// 1b. Signup Route (Updated for Phone Number)
-app.post("/signup", async (req, res) => {
-  try {
-    const { name, phoneNumber, password, role, otp } = req.body;
-
-    if (!phoneNumber || !password || !name || !otp) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    // Verify OTP
-    if (!otpStore[phoneNumber] || otpStore[phoneNumber].otp !== otp) {
-      return res.status(400).json({ message: "Invalid or expired OTP" });
-    }
-    delete otpStore[phoneNumber];
-
-    const existingUser = await User.findOne({ phoneNumber });
-    if (existingUser) {
-      return res.status(400).json({ message: "Phone number already registered" });
-    }
-
-    const user = new User({
-      name,
-      phoneNumber,
-      password, // Note: In production, use bcrypt!
-      role: role || "user"
-    });
-
-    await user.save();
-    console.log(`User created: ${phoneNumber}`);
-
-    res.status(201).json({
-      message: "User created successfully",
-      role: user.role,
-      name: user.name,
-      phoneNumber: user.phoneNumber
-    });
-  } catch (err) {
-    console.error("Error creating user:", err);
-    res.status(500).json({ message: "Server error during signup", error: err.message });
-  }
-});
-
-// 2. Login Route (Updated for Phone Number)
-app.post("/login", async (req, res) => {
-  try {
-    const { phoneNumber, password } = req.body;
-
-    const user = await User.findOne({ phoneNumber });
-
-    if (!user || user.password !== password) {
-      return res.status(401).json({ message: "Invalid phone number or password" });
-    }
-
-    res.status(200).json({
-      phoneNumber: user.phoneNumber,
-      role: user.role,
-      name: user.name,
-      outletName: user.outletName,
-      lastVerified: user.lastVerified
-    });
-  } catch (err) {
-    res.status(500).json({ message: "Server error during login" });
-  }
-});
-
-// 3. Daily Verification Route
-app.post("/daily-verify", async (req, res) => {
-  try {
-    const { phoneNumber, otp } = req.body;
-    if (!phoneNumber || !otp) return res.status(400).json({ message: "Missing fields" });
-
-    // Verify OTP
-    if (!otpStore[phoneNumber] || otpStore[phoneNumber].otp !== otp) {
-      return res.status(400).json({ message: "Invalid or expired OTP" });
-    }
-    delete otpStore[phoneNumber];
-
-    const user = await User.findOneAndUpdate(
-      { phoneNumber },
-      { lastVerified: new Date() },
-      { new: true }
-    );
-
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    res.status(200).json({ message: "Daily verification successful", lastVerified: user.lastVerified });
-  } catch (err) {
-    res.status(500).json({ message: "Verification failed" });
-  }
-});
-
-//operator -->
-//operator -->
-// Add this Schema to your server.js
 const ItemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   price: { type: Number, required: true },
   category: { type: String, required: true },
-  imageUrl: { type: String, required: true }, // We will store the URL
+  imageUrl: { type: String, required: true },
   isAvailable: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
 });
 
 const OutletStatusSchema = new mongoose.Schema({
   outlet: { type: String, required: true, unique: true },
-  isOpen: { type: Boolean, default: true }
+  isOpen: { type: Boolean, default: true },
 });
 
-const OutletStatus = mongoose.model("OutletStatus", OutletStatusSchema);
+const OutletStatus = mongoose.model('OutletStatus', OutletStatusSchema);
+const NescafeItem = mongoose.model('NescafeItem', ItemSchema);
+const LiptonItem = mongoose.model('LiptonItem', ItemSchema);
+const CanteenItem = mongoose.model('CanteenItem', ItemSchema);
+const FruitCornerItem = mongoose.model('FruitCornerItem', ItemSchema);
+const GenericItem = mongoose.model('Item', ItemSchema);
 
-// Create separate collections (tables) for different operators
-const NescafeItem = mongoose.model("NescafeItem", ItemSchema);
-const LiptonItem = mongoose.model("LiptonItem", ItemSchema);
-const CanteenItem = mongoose.model("CanteenItem", ItemSchema);
-const FruitCornerItem = mongoose.model("FruitCornerItem", ItemSchema);
-const GenericItem = mongoose.model("Item", ItemSchema); // Fallback
+// ─────────────────────────────────────────────
+// Routes
+// ─────────────────────────────────────────────
+app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/notifications', require('./routes/notificationRoutes'));
 
-// Add this Route to handle adding new items
-app.post("/add-item", upload.single("image"), async (req, res) => {
+// ─────────────────────────────────────────────
+// OTP Store (in-memory, with security metadata)
+// Structure: otpStore[email] = { otpHash, expires, attempts, requestCount, windowStart }
+// ─────────────────────────────────────────────
+const otpStore = {};
+
+const OTP_EXPIRY_MS = 5 * 60 * 1000;        // 5 minutes
+const OTP_RATE_LIMIT = 5;                    // max 5 requests per window
+const OTP_RATE_WINDOW_MS = 15 * 60 * 1000;  // 15 minute window
+const OTP_MAX_ATTEMPTS = 5;                  // max 5 wrong attempts
+
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// ─────────────────────────────────────────────
+// POST /request-email-otp
+// ─────────────────────────────────────────────
+app.post('/request-email-otp', async (req, res) => {
+  try {
+    const rawEmail = req.body.email;
+    if (!rawEmail) return res.status(400).json({ message: 'Email is required' });
+
+    const email = rawEmail.toLowerCase().trim();
+
+    // Basic email format check
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // ── Rate limiting check
+    const now = Date.now();
+    const existing = otpStore[email];
+    if (existing) {
+      const windowStart = existing.windowStart || now;
+      const windowElapsed = now - windowStart;
+
+      if (windowElapsed < OTP_RATE_WINDOW_MS) {
+        const requestCount = existing.requestCount || 0;
+        if (requestCount >= OTP_RATE_LIMIT) {
+          const waitMinutes = Math.ceil((OTP_RATE_WINDOW_MS - windowElapsed) / 60000);
+          return res.status(429).json({
+            message: `Too many OTP requests. Please wait ${waitMinutes} minute(s) before trying again.`,
+          });
+        }
+      }
+    }
+
+    // ── Generate & hash OTP
+    const otp = generateOTP();
+    const otpHash = await bcrypt.hash(otp, 8);
+
+    // ── Update store
+    const prevEntry = otpStore[email] || {};
+    const windowStart = (prevEntry.windowStart && (now - prevEntry.windowStart) < OTP_RATE_WINDOW_MS)
+      ? prevEntry.windowStart
+      : now;
+
+    otpStore[email] = {
+      otpHash,
+      expires: now + OTP_EXPIRY_MS,
+      attempts: 0,
+      requestCount: (prevEntry.requestCount || 0) + 1,
+      windowStart,
+    };
+
+    // ── Send email
+    try {
+      await sendOTPEmail(email, otp);
+      console.log(`[EMAIL] OTP sent to: ${email}`);
+      return res.status(200).json({ success: true, message: 'OTP sent successfully' });
+    } catch (emailErr) {
+      console.error('[EMAIL] Failed to send OTP:', emailErr.message);
+      delete otpStore[email]; // Don't leave a dangling entry
+      return res.status(500).json({
+        message: 'Failed to send OTP email. Please check email configuration.',
+      });
+    }
+  } catch (err) {
+    console.error('[OTP] request-email-otp error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /verify-email-otp
+// Standalone OTP verification (used before signup)
+// ─────────────────────────────────────────────
+app.post('/verify-email-otp', async (req, res) => {
+  try {
+    const rawEmail = req.body.email;
+    const { otp } = req.body;
+    if (!rawEmail || !otp) return res.status(400).json({ message: 'Email and OTP are required' });
+
+    const email = rawEmail.toLowerCase().trim();
+    const entry = otpStore[email];
+
+    if (!entry) {
+      return res.status(400).json({ message: 'No OTP found for this email. Please request a new one.' });
+    }
+    if (Date.now() > entry.expires) {
+      delete otpStore[email];
+      return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+    }
+    if (entry.attempts >= OTP_MAX_ATTEMPTS) {
+      delete otpStore[email];
+      return res.status(400).json({ message: 'Too many incorrect attempts. Please request a new OTP.' });
+    }
+
+    const isValid = await bcrypt.compare(otp, entry.otpHash);
+    if (!isValid) {
+      otpStore[email].attempts += 1;
+      const remaining = OTP_MAX_ATTEMPTS - otpStore[email].attempts;
+      return res.status(400).json({ message: `Invalid OTP. ${remaining} attempt(s) remaining.` });
+    }
+
+    // ── Mark as verified (keep entry so signup can confirm)
+    otpStore[email].verified = true;
+    console.log(`[EMAIL] OTP verification successful for: ${email}`);
+    res.status(200).json({ success: true, verified: true });
+  } catch (err) {
+    console.error('[OTP] verify-email-otp error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /signup  (email-based)
+// ─────────────────────────────────────────────
+app.post('/signup', async (req, res) => {
+  try {
+    const rawEmail = req.body.email;
+    const { name, password, role, otp } = req.body;
+
+    if (!rawEmail || !password || !name || !otp) {
+      return res.status(400).json({ message: 'All fields are required (name, email, password, otp)' });
+    }
+
+    const email = rawEmail.toLowerCase().trim();
+    const entry = otpStore[email];
+
+    // ── Verify OTP
+    if (!entry) {
+      return res.status(400).json({ message: 'No OTP found. Please request an OTP first.' });
+    }
+    if (Date.now() > entry.expires) {
+      delete otpStore[email];
+      return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+    }
+
+    const isValid = await bcrypt.compare(otp, entry.otpHash);
+    if (!isValid) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    // ── OTP valid — clear it
+    delete otpStore[email];
+
+    // ── Check for existing user
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Email already registered' });
+    }
+
+    // ── Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = new User({
+      name: name.trim(),
+      email,
+      password: passwordHash,
+      role: role || 'user',
+      emailVerified: true,
+    });
+
+    await user.save();
+    console.log(`[AUTH] User created: ${email}`);
+
+    res.status(201).json({
+      message: 'Account created successfully',
+      role: user.role,
+      name: user.name,
+      email: user.email,
+    });
+  } catch (err) {
+    console.error('[AUTH] signup error:', err);
+    res.status(500).json({ message: 'Server error during signup', error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /login  (email + password)
+// ─────────────────────────────────────────────
+app.post('/login', async (req, res) => {
+  try {
+    const rawEmail = req.body.email;
+    const { password } = req.body;
+
+    if (!rawEmail || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    const email = rawEmail.toLowerCase().trim();
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    // Support both bcrypt hashed and legacy plain-text passwords
+    let passwordMatch = false;
+    if (user.password.startsWith('$2')) {
+      passwordMatch = await bcrypt.compare(password, user.password);
+    } else {
+      // Legacy plain text (existing records)
+      passwordMatch = user.password === password;
+    }
+
+    if (!passwordMatch) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    console.log(`[AUTH] Login successful: ${email} (role: ${user.role})`);
+
+    res.status(200).json({
+      email: user.email,
+      role: user.role,
+      name: user.name,
+      outletName: user.outletName,
+      lastVerified: user.lastVerified,
+    });
+  } catch (err) {
+    console.error('[AUTH] login error:', err);
+    res.status(500).json({ message: 'Server error during login' });
+  }
+});
+
+// ─────────────────────────────────────────────
+// POST /daily-verify  (operator — email OTP)
+// ─────────────────────────────────────────────
+app.post('/daily-verify', async (req, res) => {
+  try {
+    const rawEmail = req.body.email;
+    const { otp } = req.body;
+
+    if (!rawEmail || !otp) return res.status(400).json({ message: 'Email and OTP are required' });
+
+    const email = rawEmail.toLowerCase().trim();
+    const entry = otpStore[email];
+
+    if (!entry) {
+      return res.status(400).json({ message: 'No OTP found. Please request an OTP first.' });
+    }
+    if (Date.now() > entry.expires) {
+      delete otpStore[email];
+      return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+    }
+
+    const isValid = await bcrypt.compare(otp, entry.otpHash);
+    if (!isValid) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    delete otpStore[email];
+
+    const user = await User.findOneAndUpdate(
+      { email },
+      { lastVerified: new Date() },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    console.log(`[AUTH] Daily verification successful: ${email}`);
+    res.status(200).json({ message: 'Daily verification successful', lastVerified: user.lastVerified });
+  } catch (err) {
+    console.error('[AUTH] daily-verify error:', err);
+    res.status(500).json({ message: 'Verification failed' });
+  }
+});
+
+// ─────────────────────────────────────────────
+// Item routes (unchanged)
+// ─────────────────────────────────────────────
+function getItemModel(category) {
+  switch (category.toLowerCase()) {
+    case 'nescafe': return NescafeItem;
+    case 'lipton': return LiptonItem;
+    case 'canteen': return CanteenItem;
+    case 'fruit':
+    case 'fruit corner': return FruitCornerItem;
+    default: return GenericItem;
+  }
+}
+
+app.post('/add-item', upload.single('image'), async (req, res) => {
   try {
     const { name, price, category } = req.body;
     let imageUrl = req.body.imageUrl;
-
-    if (req.file) {
-      // Cloudinary returns the full URL in req.file.path
-      imageUrl = req.file.path;
-    }
-
+    if (req.file) imageUrl = req.file.path;
     if (!name || !price || !category || !imageUrl) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({ message: 'All fields are required' });
     }
-
-    // Route the insertion to specific collections based on category
-    let TargetModel;
-    switch (category) {
-      case "Nescafe":
-        TargetModel = NescafeItem;
-        break;
-      case "Lipton":
-        TargetModel = LiptonItem;
-        break;
-      case "Canteen":
-        TargetModel = CanteenItem;
-        break;
-      case "Fruit Corner":
-        TargetModel = FruitCornerItem;
-        break;
-      default:
-        TargetModel = GenericItem;
-    }
-
+    const TargetModel = getItemModel(category);
     const newItem = new TargetModel({ name, price, category, imageUrl });
     await newItem.save();
-
-    res.status(201).json({ message: "Item added successfully to " + TargetModel.modelName });
+    res.status(201).json({ message: 'Item added successfully to ' + TargetModel.modelName });
   } catch (err) {
-    res.status(500).json({ message: "Error saving item to database" });
+    res.status(500).json({ message: 'Error saving item to database' });
   }
 });
 
-// Get items by category
-app.get("/items/:category", async (req, res) => {
+app.get('/items/:category', async (req, res) => {
   try {
-    const category = req.params.category;
-    let TargetModel;
-
-    switch (category.toLowerCase()) {
-      case "nescafe":
-        TargetModel = NescafeItem;
-        break;
-      case "lipton":
-        TargetModel = LiptonItem;
-        break;
-      case "canteen":
-        TargetModel = CanteenItem;
-        break;
-      case "fruit":
-      case "fruit corner":
-        TargetModel = FruitCornerItem;
-        break;
-      default:
-        TargetModel = GenericItem;
-    }
-
+    const TargetModel = getItemModel(req.params.category);
     const items = await TargetModel.find({});
     res.status(200).json(items);
   } catch (err) {
-    res.status(500).json({ message: "Error fetching items" });
+    res.status(500).json({ message: 'Error fetching items' });
   }
 });
 
-// Delete item by ID
-// Availability Toggle
-app.put("/item-availability/:category/:id", async (req, res) => {
+app.put('/item-availability/:category/:id', async (req, res) => {
   try {
     const { category, id } = req.params;
     const { isAvailable } = req.body;
-    let TargetModel;
-
-    switch (category.toLowerCase()) {
-      case "nescafe": TargetModel = NescafeItem; break;
-      case "lipton": TargetModel = LiptonItem; break;
-      case "canteen": TargetModel = CanteenItem; break;
-      case "fruit":
-      case "fruit corner": TargetModel = FruitCornerItem; break;
-      default: TargetModel = GenericItem;
-    }
-
+    const TargetModel = getItemModel(category);
     const item = await TargetModel.findByIdAndUpdate(id, { isAvailable }, { new: true });
     res.status(200).json(item);
   } catch (err) {
-    res.status(500).json({ message: "Error updating availability" });
+    res.status(500).json({ message: 'Error updating availability' });
   }
 });
 
-// Shop Status Endpoints
-app.get("/shop-status/:outlet", async (req, res) => {
+app.delete('/item/:category/:id', async (req, res) => {
+  try {
+    const TargetModel = getItemModel(req.params.category);
+    await TargetModel.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Item deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error deleting item' });
+  }
+});
+
+// ─────────────────────────────────────────────
+// Shop Status routes (unchanged)
+// ─────────────────────────────────────────────
+app.get('/shop-status/:outlet', async (req, res) => {
   try {
     const outlet = req.params.outlet.toLowerCase();
     let status = await OutletStatus.findOne({ outlet });
@@ -348,11 +446,11 @@ app.get("/shop-status/:outlet", async (req, res) => {
     }
     res.status(200).json(status);
   } catch (err) {
-    res.status(500).json({ message: "Error fetching shop status" });
+    res.status(500).json({ message: 'Error fetching shop status' });
   }
 });
 
-app.put("/shop-status/:outlet", async (req, res) => {
+app.put('/shop-status/:outlet', async (req, res) => {
   try {
     const outlet = req.params.outlet.toLowerCase();
     const { isOpen } = req.body;
@@ -363,40 +461,21 @@ app.put("/shop-status/:outlet", async (req, res) => {
     );
     res.status(200).json(status);
   } catch (err) {
-    res.status(500).json({ message: "Error updating shop status" });
+    res.status(500).json({ message: 'Error updating shop status' });
   }
 });
 
-app.delete("/item/:category/:id", async (req, res) => {
-  try {
-    const { category, id } = req.params;
-    let TargetModel;
-
-    switch (category.toLowerCase()) {
-      case "nescafe": TargetModel = NescafeItem; break;
-      case "lipton": TargetModel = LiptonItem; break;
-      case "canteen": TargetModel = CanteenItem; break;
-      case "fruit":
-      case "fruit corner": TargetModel = FruitCornerItem; break;
-      default: TargetModel = GenericItem;
-    }
-
-    await TargetModel.findByIdAndDelete(id);
-    res.status(200).json({ message: "Item deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: "Error deleting item" });
-  }
+// ─────────────────────────────────────────────
+// Health check
+// ─────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.send('Hunger Zone API is running 🍽️');
 });
 
-// Test route
-app.get("/", (req, res) => {
-  res.send("GGI Canteen Server is running!");
-});
-
-// -------------------
+// ─────────────────────────────────────────────
 // Start Server
-// -------------------
+// ─────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });

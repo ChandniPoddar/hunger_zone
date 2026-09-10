@@ -1,0 +1,113 @@
+const nodemailer = require('nodemailer');
+
+// ─────────────────────────────────────────────
+// Create reusable transporter (lazy init)
+// ─────────────────────────────────────────────
+let _transporter = null;
+
+function getTransporter() {
+  if (!_transporter) {
+    _transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.EMAIL_PORT || '587'),
+      secure: false, // TLS
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+  }
+  return _transporter;
+}
+
+// ─────────────────────────────────────────────
+// Send OTP Email — Professional HTML Template
+// ─────────────────────────────────────────────
+async function sendOTPEmail(email, otp) {
+  const from = process.env.EMAIL_FROM || `"Hunger Zone" <${process.env.EMAIL_USER}>`;
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hunger Zone OTP</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="480" cellpadding="0" cellspacing="0"
+               style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background:linear-gradient(135deg,#FF4B4B,#FF6B6B);padding:36px 40px;">
+              <p style="margin:0;font-size:32px;">🍽️</p>
+              <h1 style="margin:12px 0 0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:1px;">
+                Hunger Zone
+              </h1>
+              <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">
+                Campus Canteen & Food Ordering
+              </p>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px;">
+              <p style="margin:0 0 16px;color:#333;font-size:16px;">Hello,</p>
+              <p style="margin:0 0 28px;color:#555;font-size:15px;line-height:1.6;">
+                Your Hunger Zone verification code is:
+              </p>
+              <!-- OTP Box -->
+              <div style="text-align:center;margin:0 0 32px;">
+                <div style="display:inline-block;background:#FFF5F5;border:2px solid #FF6B6B;
+                            border-radius:12px;padding:20px 48px;">
+                  <span style="font-size:42px;font-weight:900;letter-spacing:16px;color:#FF4B4B;
+                               font-family:'Courier New',monospace;">
+                    ${otp}
+                  </span>
+                </div>
+              </div>
+              <p style="margin:0 0 12px;color:#888;font-size:13px;text-align:center;">
+                ⏱️ This OTP is valid for <strong>5 minutes</strong>.
+              </p>
+              <hr style="border:none;border-top:1px solid #eee;margin:28px 0;"/>
+              <p style="margin:0;color:#aaa;font-size:12px;line-height:1.6;">
+                If you did not request this OTP, please ignore this email.
+                Do not share this code with anyone.
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td align="center"
+                style="background:#fafafa;padding:20px;border-top:1px solid #eee;">
+              <p style="margin:0;color:#bbb;font-size:11px;">
+                © 2026 Hunger Zone · GGI Campus, Amritsar
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const mailOptions = {
+    from,
+    to: email,
+    subject: 'Hunger Zone — Your Verification OTP',
+    text: `Your Hunger Zone verification OTP is: ${otp}\n\nThis OTP is valid for 5 minutes.\n\nIf you did not request this OTP, please ignore this email.\n\nRegards,\nHunger Zone`,
+    html: htmlBody,
+  };
+
+  const transporter = getTransporter();
+  const info = await transporter.sendMail(mailOptions);
+  console.log(`[EMAIL] OTP sent successfully to ${email} — MessageId: ${info.messageId}`);
+  return info;
+}
+
+module.exports = { sendOTPEmail };

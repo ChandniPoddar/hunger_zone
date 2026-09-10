@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import 'auth/operator_user.dart';
@@ -19,10 +18,14 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+
+  // Consistent Brand Palette
+  static const Color primaryGradientStart = Color(0xFFFF5252);
+  static const Color primaryGradientEnd = Color(0xFFFF7A59);
+  static const Color darkBg = Color(0xFF0F172A);
 
   @override
   void initState() {
@@ -30,28 +33,31 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1200),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.7, curve: Curves.easeIn),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.8, curve: Curves.easeOutBack),
+      ),
     );
 
     _controller.forward();
-
     _navigateNext();
   }
 
   Future<void> _navigateNext() async {
     final auth = Provider.of<AuthService>(context, listen: false);
 
-    // Wait for BOTH the visual splash delay and the async session restore simultaneously.
+    // Smooth splash delay and session restore
     final results = await Future.wait([
-      Future.delayed(const Duration(seconds: 4)),
+      Future.delayed(const Duration(milliseconds: 2500)),
       auth.restoreSession(),
     ]);
 
@@ -59,38 +65,33 @@ class _SplashScreenState extends State<SplashScreen>
 
     final bool hasValidSession = results[1] as bool;
 
-    if (hasValidSession && auth.phoneNumber != null) {
-      
+    if (hasValidSession && (auth.email != null || auth.phoneNumber != null)) {
       if (auth.isAdmin || auth.role == 'operator') {
-        // Determine exact dashboard for admins
-        if (auth.phoneNumber == '9876543210') {
+        final email = auth.email?.toLowerCase().trim();
+        final outlet = auth.outletName;
+        if (email == 'admin.nescafe@hungerzone.com' || outlet == 'Nescafe' || email == '9876543210') {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const NescafeAdminDashboard()));
-        } else if (auth.phoneNumber == '9876543211') {
+        } else if (email == 'admin.lipton@hungerzone.com' || outlet == 'Lipton' || email == '9876543211') {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LiptonAdminDashboard()));
-        } else if (auth.phoneNumber == '9876543212') {
+        } else if (email == 'admin.canteen@hungerzone.com' || outlet == 'Canteen' || email == '9876543212') {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const CanteenAdminDashboard()));
-        } else if (auth.phoneNumber == '9876543213') {
+        } else if (email == 'admin.fruit@hungerzone.com' || outlet == 'Fruit Corner' || email == '9876543213') {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FruitAdminDashboard()));
         } else {
-          // If a generic operator somehow exists
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const OperatorUserScreen()));
         }
       } else {
-        // Normal User Home
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
       }
-
     } else {
-      /// Not logged in or expired session => Go to Login Chooser Gateway
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-          const OperatorUserScreen(),
+          pageBuilder: (context, animation, secondaryAnimation) => const OperatorUserScreen(),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
             return FadeTransition(opacity: animation, child: child);
           },
-          transitionDuration: const Duration(milliseconds: 800),
+          transitionDuration: const Duration(milliseconds: 600),
         ),
       );
     }
@@ -105,38 +106,46 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: darkBg,
       body: Stack(
         children: [
-          /// Background Image
-          Positioned.fill(
-            child: CachedNetworkImage(
-              imageUrl:
-              "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=2070&auto=format&fit=crop",
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(color: Colors.black),
-              errorWidget: (context, url, error) => Container(color: Colors.black),
+          // Ambient Radial Gradient Glow
+          Positioned(
+            top: -100,
+            right: -100,
+            child: Container(
+              width: 320,
+              height: 320,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    primaryGradientStart.withValues(alpha: 0.25),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
             ),
           ),
-
-          /// Dark Gradient Overlay
-          Positioned.fill(
+          Positioned(
+            bottom: -80,
+            left: -80,
             child: Container(
+              width: 280,
+              height: 280,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
                   colors: [
-                    Colors.black.withValues(alpha: 0.95),
-                    Colors.black.withValues(alpha: 0.6),
-                    const Color(0xFF0F0F0F).withValues(alpha: 0.9),
+                    primaryGradientEnd.withValues(alpha: 0.18),
+                    Colors.transparent,
                   ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
                 ),
               ),
             ),
           ),
 
-          /// Logo + Title
+          // Central Hero Content
           Center(
             child: FadeTransition(
               opacity: _fadeAnimation,
@@ -145,85 +154,90 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-
-                    /// Logo
+                    // Glowing Brand Emblem
                     Container(
-                      padding: const EdgeInsets.all(20),
+                      width: 110,
+                      height: 110,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFFFD700),
-                          width: 3,
+                        gradient: const LinearGradient(
+                          colors: [primaryGradientStart, primaryGradientEnd],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFFD700).withValues(alpha: 0.3),
-                            blurRadius: 20,
-                            spreadRadius: 5,
-                          )
+                            color: primaryGradientStart.withValues(alpha: 0.45),
+                            blurRadius: 36,
+                            offset: const Offset(0, 14),
+                          ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.restaurant_menu_rounded,
-                        size: 80,
-                        color: Color(0xFFFFD700),
+                      child: const Center(
+                        child: Icon(
+                          Icons.restaurant_rounded,
+                          size: 56,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 32),
 
-                    const SizedBox(height: 30),
-
-                    /// App Name
+                    // App Title
                     Text(
-                      "Hunger Zone",
-                      style: GoogleFonts.monoton(
-                        color: const Color(0xFFFFD700),
-                        fontSize: 42,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 4,
-                        shadows: const [
-                          Shadow(
-                            color: Colors.black,
-                            offset: Offset(2, 2),
-                            blurRadius: 10,
-                          )
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    /// Tagline
-                    Text(
-                      "Taste the World, One Plate at a Time",
+                      "HUNGER ZONE",
                       style: GoogleFonts.poppins(
                         color: Colors.white,
-                        fontSize: 16,
-                        fontStyle: FontStyle.italic,
-                        letterSpacing: 1.5,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 3,
                       ),
                     ),
+                    const SizedBox(height: 8),
 
-                    const SizedBox(height: 100),
-
-                    /// Loading
-                    const CircularProgressIndicator(
-                      color: Color(0xFFFFD700),
-                      strokeWidth: 2,
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    /// Credit
+                    // Modern Subtitle
                     Text(
-                      "Designed by Chandni",
+                      "Campus Dining & Express Ordering",
                       style: GoogleFonts.poppins(
-                        color: Colors.white54,
+                        color: Colors.white70,
                         fontSize: 14,
-                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 0.5,
                       ),
                     ),
 
+                    const SizedBox(height: 80),
+
+                    // Sleek Loader
+                    SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          primaryGradientStart.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ),
                   ],
+                ),
+              ),
+            ),
+          ),
+
+          // Bottom Signature
+          Positioned(
+            bottom: 36,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                "Fast • Fresh • Seamless",
+                style: GoogleFonts.poppins(
+                  color: Colors.white30,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 2,
                 ),
               ),
             ),

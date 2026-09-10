@@ -1,12 +1,10 @@
 import 'dart:convert';
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:hunger_zone/utils/constants.dart';
 import '../../services/auth_service.dart';
-import '../../services/notification_service.dart';
 
 class LiveTrackScreen extends StatefulWidget {
   const LiveTrackScreen({super.key});
@@ -18,49 +16,40 @@ class LiveTrackScreen extends StatefulWidget {
 class _LiveTrackScreenState extends State<LiveTrackScreen> {
   bool _loading = true;
   List _orders = [];
-  Timer? _timer;
-  final Map<String, String> _previousStatuses = {};
 
   @override
   void initState() {
     super.initState();
     _fetchMyOrders();
-    _startPolling();
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _startPolling() {
-    _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      _fetchMyOrders(isPolling: true);
-    });
-  }
-
-  Future<void> _fetchMyOrders({bool isPolling = false}) async {
+  Future<void> _fetchMyOrders() async {
     final auth = context.read<AuthService>();
-    final phone = auth.phoneNumber;
-    if (phone == null) {
+    final userEmail = auth.email ?? auth.phoneNumber;
+    if (userEmail == null || userEmail.isEmpty) {
       if (mounted) setState(() => _loading = false);
       return;
     }
 
     try {
-      final res = await http.get(Uri.parse("${AppConstants.baseUrl}/api/orders/user/$phone"));
+      final encodedEmail = Uri.encodeComponent(userEmail.toLowerCase().trim());
+      // First try email route
+      var res = await http.get(
+        Uri.parse("${AppConstants.baseUrl}/api/orders/user/email/$encodedEmail"),
+      );
+
+      // Fallback to legacy user route if empty or 404
+      if (res.statusCode != 200 || json.decode(res.body).isEmpty) {
+        final legacyRes = await http.get(
+          Uri.parse("${AppConstants.baseUrl}/api/orders/user/$encodedEmail"),
+        );
+        if (legacyRes.statusCode == 200 && json.decode(legacyRes.body).isNotEmpty) {
+          res = legacyRes;
+        }
+      }
+
       if (res.statusCode == 200) {
         final List newOrders = json.decode(res.body);
-        
-        if (isPolling) {
-          _checkStatusChanges(newOrders);
-        } else {
-          // Initialize previous statuses on first load
-          for (var order in newOrders) {
-            _previousStatuses[order['orderId']] = order['status'] ?? "Pending";
-          }
-        }
 
         if (mounted) {
           setState(() {
@@ -73,24 +62,6 @@ class _LiveTrackScreenState extends State<LiveTrackScreen> {
       }
     } catch (e) {
       if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  void _checkStatusChanges(List newOrders) {
-    for (var order in newOrders) {
-      final orderId = order['orderId'];
-      final newStatus = order['status'] ?? "Pending";
-      final oldStatus = _previousStatuses[orderId];
-
-      if (oldStatus != null && oldStatus != newStatus) {
-        // Status changed!
-        NotificationService.showNotification(
-          id: orderId.hashCode,
-          title: "Order Update",
-          body: "Your order for ${order['outlet']} is now $newStatus",
-        );
-      }
-      _previousStatuses[orderId] = newStatus;
     }
   }
 
@@ -108,8 +79,6 @@ class _LiveTrackScreenState extends State<LiveTrackScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = const Color(0xFFFF6B6B);
-
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFB),
       appBar: AppBar(
@@ -122,111 +91,121 @@ class _LiveTrackScreenState extends State<LiveTrackScreen> {
             color: Colors.black, 
             fontWeight: FontWeight.bold,
             fontSize: 20,
-          )
+          ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: _loading 
-        ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B)))
-        : _orders.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("📦", style: TextStyle(fontSize: 50)),
-                  const SizedBox(height: 16),
-                  Text(
-                    "No active orders found", 
-                    style: GoogleFonts.poppins(color: Colors.grey, fontSize: 16)
-                  ),
-                ],
+      body: RefreshIndicator(
+        color: const Color(0xFFFF6B6B),
+        onRefresh: _fetchMyOrders,
+        child: _loading 
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B)))
+          : _orders.isEmpty
+            ? Center(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    const Center(child: Text("📦", style: TextStyle(fontSize: 50))),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Text(
+                        "No active orders found", 
+                        style: GoogleFonts.poppins(color: Colors.grey, fontSize: 16),
+                      ),
+                    ),
+                  ],
+                ),
               )
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              itemCount: _orders.length,
-              itemBuilder: (context, index) {
-                final order = _orders[index];
-                final List items = order["items"] ?? [];
-                final itemsSummary = items.map((i) => "${i["quantity"]}x ${i["name"]}").join(", ");
-                final statusColor = _getStatusColor(order["status"] ?? "Pending");
+            : ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                itemCount: _orders.length,
+                itemBuilder: (context, index) {
+                  final order = _orders[index];
+                  final List items = order["items"] ?? [];
+                  final itemsSummary = items.map((i) => "${i["quantity"]}x ${i["name"]}").join(", ");
+                  final statusColor = _getStatusColor(order["status"] ?? "Pending");
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 20),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            order['outlet'] ?? 'Outlet', 
-                            style: GoogleFonts.poppins(
-                              color: Colors.black, 
-                              fontWeight: FontWeight.bold, 
-                              fontSize: 16
-                            )
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                               color: statusColor.withValues(alpha: 0.1), 
-                              borderRadius: BorderRadius.circular(10)
-                            ),
-                            child: Text(
-                              order["status"] ?? "Pending", 
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 20),
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        )
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              order["outlet"] ?? "Canteen",
                               style: GoogleFonts.poppins(
-                                color: statusColor, 
-                                fontWeight: FontWeight.bold, 
-                                fontSize: 11
-                              )
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 15),
-                      Text(
-                        "Items: $itemsSummary", 
-                        style: GoogleFonts.poppins(color: Colors.grey.shade600, fontSize: 13)
-                      ),
-                      const SizedBox(height: 20),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Order ID: ${order['orderId'] ?? ''}", 
-                            style: GoogleFonts.poppins(color: Colors.grey.shade400, fontSize: 10)
-                          ),
-                          Text(
-                            "₹${order['total']}", 
-                            style: GoogleFonts.poppins(
-                              color: primaryColor, 
-                              fontWeight: FontWeight.bold, 
-                              fontSize: 18
-                            )
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                order["status"] ?? "Pending",
+                                style: GoogleFonts.poppins(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          "Order ID: #${order["orderId"] ?? "N/A"}",
+                          style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+                        ),
+                        const Divider(height: 25),
+                        Text(
+                          itemsSummary,
+                          style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
+                        ),
+                        const SizedBox(height: 15),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Total Paid",
+                              style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
+                            ),
+                            Text(
+                              "₹${order["total"] ?? 0}",
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: const Color(0xFFFF6B6B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+      ),
     );
   }
 }

@@ -470,7 +470,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            user?['phoneNumber'] ?? "Join the movement",
+                            user?['email'] ?? user?['phoneNumber'] ?? "Join the movement",
                             style: const TextStyle(color: Color(0xFF6C757D), fontSize: 12),
                           ),
                         ],

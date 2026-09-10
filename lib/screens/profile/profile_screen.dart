@@ -115,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           ),
                         ),
                         Text(
-                          user?["phoneNumber"] ?? "0000000000",
+                          user?["email"] ?? user?["phoneNumber"] ?? "",
                           style: GoogleFonts.poppins(
                             color: textColor.withValues(alpha: 0.7),
                             fontSize: 14,

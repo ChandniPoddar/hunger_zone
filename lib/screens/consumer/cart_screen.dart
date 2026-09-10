@@ -292,7 +292,8 @@ class _CartScreenState extends State<CartScreen>
           "orderId": orderId,
           "outlet": widget.outletName ?? "Hunger Zone",
           "userName": auth.name ?? "Guest",
-          "userPhone": auth.phoneNumber ?? "0000000000",
+          "userEmail": auth.email ?? "",
+          "userPhone": auth.phoneNumber ?? "",
           "items": items,
           "total": total,
           "status": "Pending"
