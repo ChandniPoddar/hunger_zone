@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hunger_zone/providers/cart_provider.dart';
 import 'package:hunger_zone/services/auth_service.dart';
 import 'package:provider/provider.dart';
@@ -9,6 +10,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:hunger_zone/utils/constants.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../services/notification_service.dart';
 
 
@@ -45,6 +47,286 @@ class _CartScreenState extends State<CartScreen>
     super.dispose();
   }
 
+  /// ─────────────────────────────────────────────
+  /// Show Dynamic UPI QR Payment Sheet
+  /// ─────────────────────────────────────────────
+  void _showQrPaymentSheet(BuildContext context, double amount) {
+    final String upiAddress = AppConstants.receiverUpiAddress.trim();
+    final String receiverName = AppConstants.receiverName.trim();
+    final String upiUri =
+        "upi://pay?pa=$upiAddress&pn=${Uri.encodeComponent(receiverName)}&am=${amount.toStringAsFixed(2)}&cu=INR&tn=${Uri.encodeComponent("Hunger Zone Order")}";
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(32),
+              topRight: Radius.circular(32),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Drag Handle
+                Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Header Badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF5252).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.qr_code_scanner_rounded,
+                        color: Color(0xFFFF5252),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      "Scan & Pay via UPI",
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "Scan from ANY phone using GPay, PhonePe, Paytm or BHIM",
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Amount Pill
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF1F1),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: const Color(0xFFFF5252).withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    "₹${amount.toStringAsFixed(2)}",
+                    style: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFFFF5252),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                // Dynamic QR Code Card
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.grey.shade200, width: 2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: QrImageView(
+                    data: upiUri,
+                    version: QrVersions.auto,
+                    size: 210.0,
+                    backgroundColor: Colors.white,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: Color(0xFF0F172A),
+                    ),
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Receiver UPI Info + Copy Button
+                InkWell(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: upiAddress));
+                    Fluttertoast.showToast(msg: "UPI ID copied: $upiAddress");
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.account_balance_rounded, size: 16, color: Color(0xFF64748B)),
+                        const SizedBox(width: 8),
+                        Text(
+                          "$receiverName ($upiAddress)",
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0F172A),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.copy_rounded, size: 15, color: Color(0xFFFF5252)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
+
+                // Button 1: Confirm Payment (I have paid)
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _handlePaymentSuccess("QR${DateTime.now().millisecondsSinceEpoch}");
+                    },
+                    icon: const Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+                    label: Text(
+                      "I Have Paid • Confirm Order",
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981), // Emerald Green
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Button 2: Direct App Intent option
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      await _openDirectUpiAppSelector(amount);
+                    },
+                    icon: const Icon(Icons.open_in_new_rounded, size: 17, color: Color(0xFF0F172A)),
+                    label: Text(
+                      "Open Installed UPI App Directly",
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFF0F172A),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Button 3: Cash at Counter
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _handlePaymentSuccess("CASH${DateTime.now().millisecondsSinceEpoch}");
+                  },
+                  icon: const Icon(Icons.payments_outlined, size: 16, color: Color(0xFF64748B)),
+                  label: Text(
+                    "Or Pay Cash at Counter",
+                    style: GoogleFonts.poppins(
+                      color: const Color(0xFF64748B),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Direct UPI Apps Picker (Optional Intent launch)
+  Future<void> _openDirectUpiAppSelector(double amount) async {
+    final nav = Navigator.of(context);
+    final currentContext = context;
+
+    try {
+      showDialog(
+        context: currentContext,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B6B)),
+          ),
+        ),
+      );
+
+      final List<UpiApp> appMetaList = await _upiIndia.getAllUpiApps();
+
+      if (mounted) {
+        nav.pop(); // Dismiss loader
+      } else {
+        return;
+      }
+
+      if (!mounted) return;
+      final selectedApp = await _showUpiAppSelector(context, amount, appMetaList);
+
+      if (selectedApp != null && mounted) {
+        await _startUpiTransaction(selectedApp, amount);
+      }
+    } catch (e) {
+      if (mounted) nav.pop();
+      debugPrint("UPI app picker error: $e");
+      Fluttertoast.showToast(msg: "Error opening UPI apps: $e");
+    }
+  }
+
   Future<UpiApp?> _showUpiAppSelector(
       BuildContext context, double amount, List<UpiApp> apps) {
     return showModalBottomSheet<UpiApp>(
@@ -53,25 +335,17 @@ class _CartScreenState extends State<CartScreen>
       isScrollControlled: true,
       builder: (context) {
         return Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.white,
-            borderRadius: const BorderRadius.only(
+            borderRadius: BorderRadius.only(
               topLeft: Radius.circular(30),
               topRight: Radius.circular(30),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 25,
-                offset: const Offset(0, -5),
-              ),
-            ],
           ),
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Drag Handle
               Container(
                 width: 42,
                 height: 4,
@@ -81,7 +355,6 @@ class _CartScreenState extends State<CartScreen>
                 ),
               ),
               const SizedBox(height: 24),
-              // Header
               Text(
                 "Select UPI Payment App",
                 style: GoogleFonts.poppins(
@@ -101,40 +374,13 @@ class _CartScreenState extends State<CartScreen>
               const SizedBox(height: 20),
               const Divider(height: 1),
               const SizedBox(height: 20),
-              // Apps Content
               apps.isEmpty
-                  ? Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(height: 10),
-                        Icon(
-                          Icons.account_balance_wallet_outlined,
-                          size: 64,
-                          color: Colors.grey.shade300,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          "No UPI Apps Found",
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Text(
-                            "Please install Google Pay, PhonePe, Paytm, BHIM, or any other UPI app to complete your payment.",
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              color: Colors.grey.shade500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                      ],
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        "No UPI apps found on this device.",
+                        style: GoogleFonts.poppins(color: Colors.grey.shade600),
+                      ),
                     )
                   : GridView.builder(
                       shrinkWrap: true,
@@ -149,9 +395,7 @@ class _CartScreenState extends State<CartScreen>
                       itemBuilder: (context, index) {
                         final appMeta = apps[index];
                         return InkWell(
-                          onTap: () {
-                            Navigator.pop(context, appMeta);
-                          },
+                          onTap: () => Navigator.pop(context, appMeta),
                           borderRadius: BorderRadius.circular(16),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -159,7 +403,7 @@ class _CartScreenState extends State<CartScreen>
                               color: const Color(0xFFFBFBFB),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: Colors.grey.shade100,
+                                color: Colors.grey.shade200,
                                 width: 1.5,
                               ),
                             ),
@@ -203,7 +447,6 @@ class _CartScreenState extends State<CartScreen>
     try {
       final String transactionRef = "UPI${DateTime.now().millisecondsSinceEpoch}";
       
-      // Personal VPAs (like @oksbi, @okaxis, @okhdfcbank, @ybl, etc.) must NEVER have a merchantId
       final bool isPersonalVpa = AppConstants.receiverUpiAddress.contains('@oksbi') ||
           AppConstants.receiverUpiAddress.contains('@okaxis') ||
           AppConstants.receiverUpiAddress.contains('@okhdfcbank') ||
@@ -226,7 +469,6 @@ class _CartScreenState extends State<CartScreen>
       );
 
       debugPrint("UPI Response status: ${response.status}");
-      debugPrint("UPI Response approvalRef: ${response.approvalRefNo}");
 
       if (response.status == UpiPaymentStatus.SUCCESS) {
         await _handlePaymentSuccess(transactionRef);
@@ -242,43 +484,7 @@ class _CartScreenState extends State<CartScreen>
   }
 
   Future<void> _openCheckout(double amount) async {
-    final nav = Navigator.of(context);
-    final currentContext = context;
-
-    try {
-      // Show loading while fetching installed UPI apps
-      showDialog(
-        context: currentContext,
-        barrierDismissible: false,
-        builder: (ctx) => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B6B)),
-          ),
-        ),
-      );
-
-      final List<UpiApp> appMetaList =
-          await _upiIndia.getAllUpiApps();
-      
-      if (mounted) {
-        nav.pop(); // Dismiss loader
-      } else {
-        return;
-      }
-
-      if (!mounted) return;
-      final selectedApp = await _showUpiAppSelector(context, amount, appMetaList);
-      
-      if (selectedApp != null && mounted) {
-        await _startUpiTransaction(selectedApp, amount);
-      }
-    } catch (e) {
-      if (mounted) {
-        nav.pop(); // Dismiss loader if still open
-      }
-      debugPrint("Checkout Error: $e");
-      Fluttertoast.showToast(msg: "Error initializing payment: $e");
-    }
+    _showQrPaymentSheet(context, amount);
   }
 
   Future<void> _handlePaymentSuccess(String orderId) async {
