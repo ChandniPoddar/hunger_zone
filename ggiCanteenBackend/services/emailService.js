@@ -7,15 +7,39 @@ let _transporter = null;
 
 function getTransporter() {
   if (!_transporter) {
-    _transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.EMAIL_PORT || '587'),
-      secure: false, // TLS
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
+    const emailUser = (process.env.EMAIL_USER || '').trim();
+    const emailPass = (process.env.EMAIL_PASSWORD || '').replace(/\s+/g, '');
+    const emailHost = (process.env.EMAIL_HOST || 'smtp.gmail.com').trim();
+    const emailPort = parseInt(process.env.EMAIL_PORT || '465');
+
+    // Automatically use Gmail service for gmail domains or host to prevent port 587 STARTTLS ECONNRESET / timeout
+    const isGmail = emailHost.includes('gmail') || emailUser.endsWith('@gmail.com');
+
+    if (isGmail) {
+      _transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: emailUser,
+          pass: emailPass,
+        },
+        connectionTimeout: 15000,
+        greetingTimeout: 10000,
+        socketTimeout: 20000,
+      });
+    } else {
+      _transporter = nodemailer.createTransport({
+        host: emailHost,
+        port: emailPort,
+        secure: emailPort === 465,
+        auth: {
+          user: emailUser,
+          pass: emailPass,
+        },
+        connectionTimeout: 15000,
+        greetingTimeout: 10000,
+        socketTimeout: 20000,
+      });
+    }
   }
   return _transporter;
 }
