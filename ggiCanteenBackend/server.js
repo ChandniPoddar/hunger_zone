@@ -157,8 +157,9 @@ app.post('/request-email-otp', async (req, res) => {
 
     // ── Send email
     try {
-      await sendOTPEmail(email, otp);
-      console.log(`[EMAIL] OTP sent to: ${email}`);
+      console.log(`[OTP] Requesting email OTP for: ${email}`);
+      const sendResult = await sendOTPEmail(email, otp);
+      console.log(`[EMAIL] OTP delivered via ${sendResult.provider || 'configured provider'} to: ${email}`);
       return res.status(200).json({ success: true, message: 'OTP sent successfully' });
     } catch (emailErr) {
       console.error('[EMAIL] Failed to send OTP:', emailErr);
@@ -175,15 +176,29 @@ app.post('/request-email-otp', async (req, res) => {
 
 // ─────────────────────────────────────────────
 // GET /test-email-health
-// Diagnostic endpoint to test email transporter
+// Diagnostic endpoint to test email provider configuration
 // ─────────────────────────────────────────────
 app.get('/test-email-health', async (req, res) => {
   try {
-    if (process.env.RESEND_API_KEY) {
-      return res.json({ status: 'healthy', provider: 'resend_https', port: 443 });
-    }
     if (process.env.BREVO_API_KEY) {
-      return res.json({ status: 'healthy', provider: 'brevo_https', port: 443 });
+      return res.json({
+        status: 'healthy',
+        provider: 'brevo_https',
+        port: 443,
+        sender: process.env.BREVO_SENDER_EMAIL || process.env.EMAIL_USER || 'chandni5developer@gmail.com',
+        note: 'Brevo sends to any recipient worldwide without requiring custom domain DNS records.',
+      });
+    }
+    if (process.env.RESEND_API_KEY) {
+      return res.json({
+        status: 'healthy',
+        provider: 'resend_https',
+        port: 443,
+        sender: process.env.RESEND_FROM || 'Hunger Zone <onboarding@resend.dev>',
+        warning: !process.env.RESEND_FROM || process.env.RESEND_FROM.includes('resend.dev')
+          ? 'Resend test mode: Can only send to account owner. Add BREVO_API_KEY to send to all users.'
+          : undefined,
+      });
     }
     const transporter = getTransporter();
     await transporter.verify();
@@ -200,7 +215,7 @@ app.get('/test-email-health', async (req, res) => {
       message: err.message,
       code: err.code,
       hint: err.code === 'ETIMEDOUT'
-        ? 'Render Free Tier blocks outbound SMTP ports 25, 465, and 587. To send emails on Render Free Tier, add RESEND_API_KEY or BREVO_API_KEY to Render Environment variables, or upgrade to a paid Render service.'
+        ? 'Render Free Tier blocks outbound SMTP ports 25, 465, and 587. To send emails on Render Free Tier, add BREVO_API_KEY to Render Environment variables.'
         : undefined,
     });
   }

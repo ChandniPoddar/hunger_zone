@@ -121,66 +121,106 @@ async function sendOTPEmail(email, otp) {
 </html>
   `;
 
-  // 1. Resend HTTPS API (Port 443 — Bypasses cloud SMTP port blocking)
-  if (process.env.RESEND_API_KEY) {
-    console.log('[EMAIL] Sending via Resend HTTPS API (port 443)...');
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM || 'Hunger Zone <onboarding@resend.dev>',
-        to: [email],
-        subject: 'Hunger Zone — Your Verification OTP',
-        html: htmlBody,
-        text: `Your Hunger Zone verification OTP is: ${otp}\n\nThis OTP is valid for 5 minutes.\n\nRegards,\nHunger Zone`,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(`Resend Error: ${data.message || JSON.stringify(data)}`);
-    console.log(`[EMAIL] OTP sent successfully via Resend to ${email} — ID: ${data.id}`);
-    return { messageId: data.id };
-  }
+  const errors = [];
+  const senderEmail = (process.env.BREVO_SENDER_EMAIL || emailUser).trim();
 
-  // 2. Brevo HTTPS API (Port 443 — Bypasses cloud SMTP port blocking)
+  // 1. Brevo HTTPS API (Port 443 — Bypasses cloud SMTP port blocking, sends to ANY recipient)
   if (process.env.BREVO_API_KEY) {
-    console.log('[EMAIL] Sending via Brevo HTTPS API (port 443)...');
-    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'api-key': process.env.BREVO_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        sender: { name: 'Hunger Zone', email: emailUser },
-        to: [{ email }],
-        subject: 'Hunger Zone — Your Verification OTP',
-        htmlContent: htmlBody,
-        textContent: `Your Hunger Zone verification OTP is: ${otp}\n\nThis OTP is valid for 5 minutes.\n\nRegards,\nHunger Zone`,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(`Brevo Error: ${data.message || JSON.stringify(data)}`);
-    console.log(`[EMAIL] OTP sent successfully via Brevo to ${email} — ID: ${data.messageId}`);
-    return { messageId: data.messageId };
+    try {
+      console.log(`[EMAIL] Sending via Brevo HTTPS API (port 443) from ${senderEmail}...`);
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.BREVO_API_KEY.trim(),
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: {
+            name: process.env.EMAIL_SENDER_NAME || 'Hunger Zone',
+            email: senderEmail,
+          },
+          to: [{ email }],
+          subject: 'Hunger Zone — Your Verification OTP',
+          htmlContent: htmlBody,
+          textContent: `Your Hunger Zone verification OTP is: ${otp}\n\nThis OTP is valid for 5 minutes.\n\nRegards,\nHunger Zone`,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || JSON.stringify(data));
+      }
+
+      console.log(`[EMAIL] ✅ OTP sent successfully via Brevo to ${email} — MessageId: ${data.messageId}`);
+      return { messageId: data.messageId, provider: 'brevo' };
+    } catch (brevoErr) {
+      console.error(`[EMAIL WARN] Brevo failed: ${brevoErr.message}. Checking next provider...`);
+      errors.push(`Brevo: ${brevoErr.message}`);
+    }
   }
 
-  // 3. Nodemailer SMTP (Local development, Paid instances, VPS)
-  console.log('[EMAIL] Sending via SMTP...');
-  const mailOptions = {
-    from,
-    to: email,
-    subject: 'Hunger Zone — Your Verification OTP',
-    text: `Your Hunger Zone verification OTP is: ${otp}\n\nThis OTP is valid for 5 minutes.\n\nIf you did not request this OTP, please ignore this email.\n\nRegards,\nHunger Zone`,
-    html: htmlBody,
-  };
+  // 2. Resend HTTPS API (Port 443 — Fallback if configured)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      console.log('[EMAIL] Sending via Resend HTTPS API (port 443)...');
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.RESEND_API_KEY.trim()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM || 'Hunger Zone <onboarding@resend.dev>',
+          to: [email],
+          subject: 'Hunger Zone — Your Verification OTP',
+          html: htmlBody,
+          text: `Your Hunger Zone verification OTP is: ${otp}\n\nThis OTP is valid for 5 minutes.\n\nRegards,\nHunger Zone`,
+        }),
+      });
 
-  const transporter = getTransporter();
-  const info = await transporter.sendMail(mailOptions);
-  console.log(`[EMAIL] OTP sent successfully to ${email} — MessageId: ${info.messageId}`);
-  return info;
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || JSON.stringify(data));
+      }
+
+      console.log(`[EMAIL] ✅ OTP sent successfully via Resend to ${email} — ID: ${data.id}`);
+      return { messageId: data.id, provider: 'resend' };
+    } catch (resendErr) {
+      console.error(`[EMAIL WARN] Resend failed: ${resendErr.message}. Checking next provider...`);
+      errors.push(`Resend: ${resendErr.message}`);
+    }
+  }
+
+  // 3. Nodemailer SMTP (Local development, VPS, or cloud hosts with open SMTP ports)
+  try {
+    console.log('[EMAIL] Attempting delivery via Nodemailer SMTP...');
+    const mailOptions = {
+      from,
+      to: email,
+      subject: 'Hunger Zone — Your Verification OTP',
+      text: `Your Hunger Zone verification OTP is: ${otp}\n\nThis OTP is valid for 5 minutes.\n\nIf you did not request this OTP, please ignore this email.\n\nRegards,\nHunger Zone`,
+      html: htmlBody,
+    };
+
+    const transporter = getTransporter();
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[EMAIL] ✅ OTP sent successfully via SMTP to ${email} — MessageId: ${info.messageId}`);
+    return { messageId: info.messageId, provider: 'smtp' };
+  } catch (smtpErr) {
+    console.error(`[EMAIL WARN] SMTP failed: ${smtpErr.message}`);
+    errors.push(`SMTP: ${smtpErr.message}`);
+  }
+
+  // If all providers failed
+  const summaryError = errors.length > 0
+    ? errors.join(' | ')
+    : 'No email provider configured. Please configure BREVO_API_KEY or EMAIL_PASSWORD.';
+
+  console.error(`[EMAIL ERROR] All email providers failed to send OTP to ${email}: ${summaryError}`);
+  console.log(`[DEV OTP LOG] Verification code for ${email} is: ${otp}`);
+
+  throw new Error(`Failed to send email (${summaryError})`);
 }
 
 module.exports = { sendOTPEmail, getTransporter };
