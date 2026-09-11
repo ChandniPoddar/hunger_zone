@@ -146,6 +146,8 @@ class AuthService extends ChangeNotifier {
         body: jsonEncode({
           "email": email!.trim().toLowerCase(),
           "fcmToken": token,
+          "role": role,
+          "outletName": outletName,
         }),
       );
     } catch (e) {

@@ -124,11 +124,16 @@ async function sendNotificationToUser(email, title, body, data = {}) {
 // Send notification to ALL admins of a specific outlet
 // ─────────────────────────────────────────────
 async function sendNotificationToOutlet(outletName, title, body, data = {}) {
-  try {
-    const User = require('../models/User');
+    const outletClean = (outletName || '').trim();
+    const outletRegex = new RegExp(`^${outletClean}$`, 'i');
+    const key = outletClean.toLowerCase().replace(/[^a-z0-9]/g, '');
+
     const admins = await User.find({
-      role: 'admin',
-      outletName: new RegExp(`^${outletName}$`, 'i'),
+      $or: [
+        { outletName: outletRegex },
+        { email: new RegExp(`admin\\.${key}@`, 'i') },
+        { role: new RegExp(`admin.*${key}`, 'i') },
+      ],
     }).select('fcmTokens email');
 
     if (!admins || admins.length === 0) {

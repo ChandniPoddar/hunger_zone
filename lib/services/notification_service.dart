@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -14,6 +16,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  static const String _historyKey = 'notifications_history';
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'hunger_zone_channel',
@@ -136,13 +140,16 @@ class NotificationService {
     }
   }
 
-  /// Show local heads-up notification
+  /// Show local heads-up notification and save to history
   static Future<void> showNotification({
     required int id,
     required String title,
     required String body,
     String? payload,
   }) async {
+    // Save to persistent notification history
+    await saveNotificationToHistory(title: title, body: body, payload: payload);
+
     AndroidNotificationDetails androidNotificationDetails =
         AndroidNotificationDetails(
       _channel.id,
@@ -164,5 +171,66 @@ class NotificationService {
       notificationDetails,
       payload: payload,
     );
+  }
+
+  /// Save notification item to local SharedPreferences
+  static Future<void> saveNotificationToHistory({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> history = prefs.getStringList(_historyKey) ?? [];
+
+      final item = {
+        'id': DateTime.now().millisecondsSinceEpoch.toString(),
+        'title': title,
+        'body': body,
+        'payload': payload ?? '',
+        'timestamp': DateTime.now().toIso8601String(),
+        'isRead': false,
+      };
+
+      // Insert at front
+      history.insert(0, jsonEncode(item));
+
+      // Keep maximum 50 notifications
+      if (history.length > 50) {
+        history.removeRange(50, history.length);
+      }
+
+      await prefs.setStringList(_historyKey, history);
+    } catch (e) {
+      debugPrint("Error saving notification to history: $e");
+    }
+  }
+
+  /// Retrieve all stored notifications
+  static Future<List<Map<String, dynamic>>> getNotificationHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final List<String> rawList = prefs.getStringList(_historyKey) ?? [];
+      return rawList.map((itemStr) {
+        try {
+          return Map<String, dynamic>.from(jsonDecode(itemStr));
+        } catch (_) {
+          return <String, dynamic>{};
+        }
+      }).where((m) => m.isNotEmpty).toList();
+    } catch (e) {
+      debugPrint("Error loading notification history: $e");
+      return [];
+    }
+  }
+
+  /// Clear all notification history
+  static Future<void> clearNotificationHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_historyKey);
+    } catch (e) {
+      debugPrint("Error clearing notification history: $e");
+    }
   }
 }

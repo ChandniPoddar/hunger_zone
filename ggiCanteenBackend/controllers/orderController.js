@@ -7,26 +7,31 @@ const {
 // ─────────────────────────────────────────────
 // Status notification messages
 // ─────────────────────────────────────────────
-function getStatusNotification(status, outlet) {
+function getStatusNotification(status, outlet, orderId) {
+  const idStr = orderId ? ` (#${orderId})` : '';
   const messages = {
     Accepted: {
-      title: "✅ Order Accepted",
-      body: `Your order from ${outlet} has been accepted.`,
+      title: `✅ Order Confirmed${idStr}`,
+      body: `Your order from ${outlet} has been confirmed.`,
+    },
+    Confirmed: {
+      title: `✅ Order Confirmed${idStr}`,
+      body: `Your order from ${outlet} has been confirmed.`,
     },
     Preparing: {
-      title: "👨‍🍳 Order Preparing",
-      body: `Your order from ${outlet} is being prepared.`,
+      title: `👨‍🍳 Order Preparing${idStr}`,
+      body: `Your order from ${outlet} is being prepared in the kitchen.`,
     },
     Ready: {
-      title: "🎉 Order Ready!",
-      body: `Your order from ${outlet} is ready for pickup!`,
+      title: `🎉 Order Ready for Pickup!${idStr}`,
+      body: `Your order from ${outlet} is ready! Please collect it at the counter.`,
     },
     Completed: {
-      title: "✅ Order Completed",
-      body: `Your order from ${outlet} has been completed successfully.`,
+      title: `✅ Order Completed${idStr}`,
+      body: `Your order from ${outlet} has been completed. Enjoy your meal!`,
     },
     Rejected: {
-      title: "❌ Order Rejected",
+      title: `❌ Order Rejected${idStr}`,
       body: `Unfortunately, your order from ${outlet} was rejected.`,
     },
   };
@@ -43,11 +48,11 @@ exports.createOrder = async (req, res) => {
     console.log(`[ORDER] New order created: ${order.orderId} for outlet: ${order.outlet}`);
 
     // ── FCM: Notify the correct outlet admin (non-blocking)
-    const itemList = order.items.map((i) => `${i.quantity}x ${i.name}`).join(", ");
+    const itemList = (order.items || []).map((i) => `${i.quantity}x ${i.name}`).join(", ");
     sendNotificationToOutlet(
       order.outlet,
-      "🍔 New Order!",
-      `Order #${order.orderId} received. Total: ₹${order.total}`,
+      `🍔 New Order #${order.orderId}!`,
+      `New order for ${order.outlet} - ₹${order.total}. Items: ${itemList}`,
       {
         type: "new_order",
         orderId: order.orderId || "",
@@ -147,7 +152,7 @@ exports.updateOrderStatus = async (req, res) => {
     console.log(`[ORDER] Status updated: ${order.orderId} → ${status}`);
 
     // ── FCM: Notify customer (non-blocking)
-    const notification = getStatusNotification(status, order.outlet);
+    const notification = getStatusNotification(status, order.outlet, order.orderId);
     if (notification && order.userEmail) {
       sendNotificationToUser(order.userEmail, notification.title, notification.body, {
         type: "order_status",
@@ -157,7 +162,7 @@ exports.updateOrderStatus = async (req, res) => {
       }).catch((err) =>
         console.error("[FCM] Customer status notification failed (non-fatal):", err.message)
       );
-      console.log(`[ORDER] Customer status notification triggered for: ${order.userEmail}`);
+      console.log(`[ORDER] Customer status notification triggered for: ${order.userEmail} (status: ${status}, orderId: ${order.orderId})`);
     }
 
     res.json(order);

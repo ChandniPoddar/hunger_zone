@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../providers/theme_provider.dart';
 import '../../providers/outlet_provider.dart';
 
 
@@ -20,6 +19,7 @@ import 'live_track_screen.dart';
 
 import 'wishlist_screen.dart';
 import 'history_screen.dart';
+import 'notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -53,8 +53,6 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const LiveTrackScreen()));
     } else if (index == 3) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen()));
-    } else if (index == 4) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
     }
   }
 
@@ -356,19 +354,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF28A745), // Green color matching screenshot
-                          borderRadius: BorderRadius.circular(8),
+                          color: const Color(0xFFFF4B4B).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Row(
-                          children: [
-                            Text(rating, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.star_rounded, color: Colors.white, size: 13),
-                          ],
+                        child: const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: Color(0xFFFF4B4B),
+                          size: 14,
                         ),
-                      )
+                      ),
                     ],
                   ),
                 )
@@ -409,10 +405,6 @@ class _HomeScreenState extends State<HomeScreen> {
           NavigationDestination(
             icon: Icon(Icons.receipt_long_rounded, color: _selectedIndex == 3 ? const Color(0xFFFF4B4B) : const Color(0xFFADB5BD)),
             label: "History",
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_rounded, color: _selectedIndex == 4 ? const Color(0xFFFF4B4B) : const Color(0xFFADB5BD)),
-            label: "Profile",
           ),
         ],
       ),
@@ -509,38 +501,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
                   child: Divider(color: Color(0xFFE9ECEF)),
                 ),
-                _buildDrawerItem(Icons.person_outline_rounded, Icons.person_rounded, "Profile Settings", 4, () {
+                _buildDrawerItem(Icons.person_outline_rounded, Icons.person_rounded, "Profile Settings", -1, () {
                   Navigator.pop(context);
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
                 }),
-                _buildDrawerItem(Icons.notifications_none_rounded, Icons.notifications_rounded, "Notifications", -1, () {}),
-                _buildDrawerItem(Icons.help_outline_rounded, Icons.help_rounded, "Help & Support", -1, () {}),
-                
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 16),
-                  child: Divider(color: Color(0xFFE9ECEF)),
-                ),
-                
-                // Theme Toggle
-                Consumer<ThemeProvider>(
-                  builder: (context, themeProvider, child) {
-                    return SwitchListTile(
-                      activeThumbColor: const Color(0xFFFF4B4B),
-                      secondary: Icon(
-                        themeProvider.isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                        color: themeProvider.isDarkMode ? const Color(0xFFFFD700) : const Color(0xFFFF4B4B),
-                      ),
-                      title: Text(
-                        themeProvider.isDarkMode ? "Dark Mode" : "Light Mode",
-                        style: const TextStyle(color: Color(0xFF1A1A2E), fontWeight: FontWeight.w500, fontSize: 15),
-                      ),
-                      value: themeProvider.isDarkMode,
-                      onChanged: (value) {
-                        themeProvider.toggleTheme();
-                      },
-                    );
-                  },
-                ),
+                _buildDrawerItem(Icons.notifications_none_rounded, Icons.notifications_rounded, "Notifications", -1, () {
+                  Navigator.pop(context);
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+                }),
+                _buildDrawerItem(Icons.help_outline_rounded, Icons.help_rounded, "Help & Support", -1, () {
+                  Navigator.pop(context);
+                  _showHelpDialog(context);
+                }),
               ],
             ),
           ),
@@ -597,6 +569,56 @@ class _HomeScreenState extends State<HomeScreen> {
         trailing: isSelected 
           ? Container(width: 4, height: 20, decoration: BoxDecoration(color: const Color(0xFFFF4B4B), borderRadius: BorderRadius.circular(10)))
           : const Icon(Icons.chevron_right_rounded, color: Color(0xFFCED4DA), size: 18),
+      ),
+    );
+  }
+
+  void _showHelpDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF4B4B).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.help_outline_rounded, color: Color(0xFFFF4B4B)),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              "Help & Support",
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Need help with an order or account?",
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "• Canteen Hours: 8:30 AM - 7:00 PM\n• Locations: Main Canteen, Nescafe Hub, Lipton Corner, Fruit Corner\n• Counter: College Main Canteen Building\n• Support Email: support@hungerzone.com",
+              style: GoogleFonts.poppins(fontSize: 12.5, color: Colors.grey.shade700, height: 1.6),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              "Close",
+              style: GoogleFonts.poppins(color: const Color(0xFFFF4B4B), fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }

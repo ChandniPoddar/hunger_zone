@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
+import '../consumer/history_screen.dart';
+import '../consumer/wishlist_screen.dart';
+import '../consumer/notifications_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -148,12 +151,42 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         ),
                       ),
                       const SizedBox(height: 20),
-                      _buildProfileTile(theme, icon: Icons.person_outline_rounded, title: "Personal Details"),
-                      _buildProfileTile(theme, icon: Icons.shopping_bag_outlined, title: "My Orders"),
-                      _buildProfileTile(theme, icon: Icons.favorite_border_rounded, title: "Favorites"),
-                      _buildProfileTile(theme, icon: Icons.location_on_outlined, title: "Shipping Address"),
-                      _buildProfileTile(theme, icon: Icons.payment_rounded, title: "Payment Methods"),
-                      _buildProfileTile(theme, icon: Icons.settings_suggest_outlined, title: "App Settings"),
+                      _buildProfileTile(
+                        theme,
+                        icon: Icons.person_outline_rounded,
+                        title: "Personal Details",
+                        onTap: () => _showPersonalDetailsModal(context, user),
+                      ),
+                      _buildProfileTile(
+                        theme,
+                        icon: Icons.shopping_bag_outlined,
+                        title: "My Orders",
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen())),
+                      ),
+                      _buildProfileTile(
+                        theme,
+                        icon: Icons.favorite_border_rounded,
+                        title: "Favorites",
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WishlistScreen())),
+                      ),
+                      _buildProfileTile(
+                        theme,
+                        icon: Icons.notifications_none_rounded,
+                        title: "Notifications",
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                      ),
+                      _buildProfileTile(
+                        theme,
+                        icon: Icons.payment_rounded,
+                        title: "Payment Methods",
+                        onTap: () => _showPaymentOptionsModal(context),
+                      ),
+                      _buildProfileTile(
+                        theme,
+                        icon: Icons.help_outline_rounded,
+                        title: "Help & Support",
+                        onTap: () => _showHelpSupportModal(context),
+                      ),
                       const SizedBox(height: 40),
                       Center(
                         child: TextButton.icon(
@@ -193,7 +226,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildProfileTile(ThemeData theme, {required IconData icon, required String title}) {
+  Widget _buildProfileTile(ThemeData theme, {required IconData icon, required String title, VoidCallback? onTap}) {
     final primaryColor = theme.primaryColor;
     final textColor = theme.colorScheme.onSurface;
 
@@ -226,7 +259,184 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           style: GoogleFonts.poppins(color: textColor, fontSize: 16, fontWeight: FontWeight.w500),
         ),
         trailing: Icon(Icons.chevron_right_rounded, color: textColor.withValues(alpha: 0.3)),
-        onTap: () {},
+        onTap: onTap,
+      ),
+    );
+  }
+
+  void _showPersonalDetailsModal(BuildContext context, Map<String, dynamic>? user) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.person_outline_rounded, color: Color(0xFFFF6B6B), size: 24),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  "Personal Details",
+                  style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1A1A2E)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _buildDetailRow("Full Name", user?['name'] ?? "Guest User", Icons.badge_outlined),
+            const Divider(height: 24),
+            _buildDetailRow("Email Address", user?['email'] ?? "Not provided", Icons.email_outlined),
+            const Divider(height: 24),
+            _buildDetailRow("Account Role", (user?['role'] ?? "user").toString().toUpperCase(), Icons.security_outlined),
+            const Divider(height: 24),
+            _buildDetailRow("Status", "Email Verified", Icons.verified_user_outlined, color: const Color(0xFF28A745)),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF6B6B),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                onPressed: () => Navigator.pop(ctx),
+                child: Text("Done", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, IconData icon, {Color? color}) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Colors.grey.shade500),
+        const SizedBox(width: 14),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey.shade500)),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: color ?? const Color(0xFF1A1A2E),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _showPaymentOptionsModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text("Accepted Payment Methods", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF1A1A2E))),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFFFF6B6B)),
+              title: Text("UPI Direct Intent", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              subtitle: Text("Google Pay, PhonePe, Paytm, BHIM", style: GoogleFonts.poppins(fontSize: 12)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.payments_outlined, color: Color(0xFF28A745)),
+              title: Text("Cash at Counter (COD)", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+              subtitle: Text("Pay in cash when picking up your food", style: GoogleFonts.poppins(fontSize: 12)),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showHelpSupportModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFF6B6B).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.help_outline_rounded, color: Color(0xFFFF6B6B)),
+            ),
+            const SizedBox(width: 12),
+            Text("Help & Support", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Campus Canteen Information", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
+            const SizedBox(height: 8),
+            Text(
+              "• Service Hours: 8:30 AM - 7:00 PM\n• Outlets: Main Canteen, Nescafe, Lipton, Fruit Corner\n• Counter: Campus Food Court Ground Floor\n• Email Support: support@hungerzone.com",
+              style: GoogleFonts.poppins(fontSize: 12.5, color: Colors.grey.shade700, height: 1.6),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text("Close", style: GoogleFonts.poppins(color: const Color(0xFFFF6B6B), fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

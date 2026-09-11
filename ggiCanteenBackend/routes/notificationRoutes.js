@@ -8,7 +8,7 @@ const User = require("../models/User");
 // ─────────────────────────────────────────────
 router.post("/register-token", async (req, res) => {
   try {
-    const { email, fcmToken } = req.body;
+    const { email, fcmToken, role, outletName } = req.body;
 
     if (!email || !fcmToken) {
       return res.status(400).json({ message: "email and fcmToken are required" });
@@ -16,18 +16,25 @@ router.post("/register-token", async (req, res) => {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Add token only if not already present ($addToSet prevents duplicates)
-    const user = await User.findOneAndUpdate(
-      { email: normalizedEmail },
-      { $addToSet: { fcmTokens: fcmToken } },
-      { new: true }
-    );
+    const updateDoc = {
+      $addToSet: { fcmTokens: fcmToken },
+    };
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    const setFields = {};
+    if (role) setFields.role = role;
+    if (outletName) setFields.outletName = outletName;
+    if (Object.keys(setFields).length > 0) {
+      updateDoc.$set = setFields;
     }
 
-    console.log(`[FCM] Token registered for user: ${normalizedEmail}`);
+    // Upsert ensures admin or user is registered even with shortcut logins
+    const user = await User.findOneAndUpdate(
+      { email: normalizedEmail },
+      updateDoc,
+      { new: true, upsert: true }
+    );
+
+    console.log(`[FCM] Token registered for user: ${normalizedEmail} (role: ${user.role || role || 'user'}, outlet: ${user.outletName || outletName || 'none'})`);
     res.json({ success: true, message: "FCM token registered" });
   } catch (err) {
     console.error("[FCM] register-token error:", err.message);
