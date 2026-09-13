@@ -16,14 +16,11 @@ test.describe('E2E Suite 2: Multi-Vendor Engine & Configuration', () => {
     expect(vendorIds).toContain('lipton');
     expect(vendorIds).toContain('fruit_corner');
 
-    // Verify Main Canteen is pre-configured with real BharatPe VPA
+    // Verify Main Canteen is listed and active
     const canteen = vendors.find(v => v.vendorId === 'canteen');
     expect(canteen).toBeDefined();
-    expect(canteen.isPaymentConfigured).toBe(true);
-    expect(canteen.upiId).toBe('BHARATPE.9J0E0Z0U0M847077@unitype');
-    expect(canteen.receiverName).toBe('SIMON RAJKUMAR GROVER');
-    expect(canteen.merchantId).toBe('5812');
     expect(canteen.isActive).toBe(true);
+    expect(canteen.outletName).toBe('Canteen');
 
     // Verify Nescafé starts unconfigured
     const nescafe = vendors.find(v => v.vendorId === 'nescafe');
@@ -49,7 +46,7 @@ test.describe('E2E Suite 2: Multi-Vendor Engine & Configuration', () => {
     const body = await res.json();
     expect(body.vendorId).toBe('canteen');
     expect(body.name).toBe('Main Canteen');
-    expect(body.isPaymentConfigured).toBe(true);
+    expect(body.isActive).toBe(true);
 
     // Non-existent vendor returns 404
     const notFoundRes = await request.get('/api/vendors/non_existent_vendor');

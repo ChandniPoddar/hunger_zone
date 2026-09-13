@@ -125,11 +125,14 @@ const DEFAULT_VENDORS = [
     vendorId: 'canteen',
     name: 'Main Canteen',
     outletName: 'Canteen',
-    merchantId: process.env.MERCHANT_CODE || '5812',
-    upiId: 'BHARATPE.9J0E0Z0U0M847077@unitype',
-    receiverName: 'SIMON RAJKUMAR GROVER',
+    merchantId: process.env.CANTEEN_MERCHANT_ID || process.env.MERCHANT_CODE || '5812',
+    upiId: process.env.CANTEEN_UPI_ID || process.env.RECEIVER_UPI_ADDRESS || null,
+    receiverName: process.env.CANTEEN_RECEIVER_NAME || process.env.RECEIVER_NAME || null,
     isActive: true,
-    isPaymentConfigured: true,
+    isPaymentConfigured: Boolean(
+      (process.env.CANTEEN_UPI_ID || process.env.RECEIVER_UPI_ADDRESS) &&
+      (process.env.CANTEEN_RECEIVER_NAME || process.env.RECEIVER_NAME)
+    ),
   },
   {
     vendorId: 'nescafe',
@@ -177,6 +180,11 @@ async function seedDefaultVendors() {
         const vendor = new Vendor(def);
         await vendor.save();
         console.log(`[VENDOR] Seeded initial vendor: ${def.name} (${def.vendorId}) - Payment Configured: ${def.isPaymentConfigured}`);
+      } else if (def.upiId && existing.upiId !== def.upiId) {
+        existing.upiId = def.upiId;
+        existing.receiverName = def.receiverName;
+        existing.isPaymentConfigured = def.isPaymentConfigured;
+        await existing.save();
       }
     }
   } catch (err) {

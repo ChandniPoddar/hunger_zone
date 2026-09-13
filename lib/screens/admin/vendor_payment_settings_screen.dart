@@ -495,22 +495,6 @@ class _VendorPaymentSettingsScreenState extends State<VendorPaymentSettingsScree
                   color: darkNavy,
                 ),
               ),
-              if (_selectedVendorId == 'canteen')
-                TextButton.icon(
-                  icon: const Icon(Icons.restore_rounded, size: 16, color: primaryCoral),
-                  label: Text(
-                    "Fill Default",
-                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: primaryCoral),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _upiIdController.text = "BHARATPE.9J0E0Z0U0M847077@unitype";
-                      _receiverNameController.text = "SIMON RAJKUMAR GROVER";
-                      _merchantIdController.text = "5812";
-                      _isActive = true;
-                    });
-                  },
-                ),
             ],
           ),
           const SizedBox(height: 16),
@@ -519,7 +503,7 @@ class _VendorPaymentSettingsScreenState extends State<VendorPaymentSettingsScree
           _buildTextField(
             controller: _upiIdController,
             label: "UPI ID / VPA",
-            hint: "e.g. BHARATPE.9J0E0Z0U0M847077@unitype",
+            hint: "e.g. vendor@bank or merchant@upi",
             icon: Icons.qr_code_rounded,
             validator: (v) {
               if (v != null && v.trim().isNotEmpty && !v.contains('@')) {
@@ -534,7 +518,7 @@ class _VendorPaymentSettingsScreenState extends State<VendorPaymentSettingsScree
           _buildTextField(
             controller: _receiverNameController,
             label: "Receiver / Payee Business Name",
-            hint: "e.g. SIMON RAJKUMAR GROVER",
+            hint: "e.g. Campus Canteen / Business Name",
             icon: Icons.business_rounded,
           ),
           const SizedBox(height: 16),

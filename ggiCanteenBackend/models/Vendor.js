@@ -28,12 +28,12 @@ const vendorSchema = new mongoose.Schema(
       type: String,
       default: null,
       trim: true,
-    }, // e.g. 'BHARATPE.9J0E0Z0U0M847077@unitype'
+    }, // e.g. 'merchant@upi'
     receiverName: {
       type: String,
       default: null,
       trim: true,
-    }, // e.g. 'SIMON RAJKUMAR GROVER'
+    }, // e.g. 'Store Business Name'
     qrCode: {
       type: String,
       default: null,

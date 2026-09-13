@@ -5,6 +5,37 @@ test.describe('E2E Suite 6: Dynamic Multi-Vendor UPI Payments', () => {
   const canteenOrderId = `UPI_CANTEEN_${Date.now()}`;
   const nescafeOrderId = `UPI_NESCAFE_${Date.now()}`;
   let canteenTxnRef;
+  let originalCanteen;
+
+  test.beforeAll(async ({ request }) => {
+    // Preserve initial canteen config and set dynamic test credentials
+    const res = await request.get('/api/vendors/canteen');
+    if (res.status() === 200) {
+      originalCanteen = await res.json();
+    }
+    await request.put('/api/vendors/canteen', {
+      data: {
+        upiId: 'testcanteen@upi',
+        receiverName: 'Test Canteen Outlet',
+        merchantId: '5812',
+        isActive: true,
+      },
+    });
+  });
+
+  test.afterAll(async ({ request }) => {
+    // Restore canteen to its original configuration
+    if (originalCanteen) {
+      await request.put('/api/vendors/canteen', {
+        data: {
+          upiId: originalCanteen.upiId || '',
+          receiverName: originalCanteen.receiverName || '',
+          merchantId: originalCanteen.merchantId || '',
+          isActive: originalCanteen.isActive ?? true,
+        },
+      });
+    }
+  });
 
   test('Step 1: Create UPI orders for Canteen and Nescafe', async ({ request }) => {
     // 1. Canteen Order
@@ -38,7 +69,7 @@ test.describe('E2E Suite 6: Dynamic Multi-Vendor UPI Payments', () => {
     expect(nRes.status()).toBe(201);
   });
 
-  test('POST /api/payment/create-intent - Main Canteen returns dynamic BharatPe parameters', async ({ request }) => {
+  test('POST /api/payment/create-intent - Main Canteen returns dynamic payment parameters', async ({ request }) => {
     const res = await request.post('/api/payment/create-intent', {
       data: {
         orderId: canteenOrderId,
@@ -49,8 +80,8 @@ test.describe('E2E Suite 6: Dynamic Multi-Vendor UPI Payments', () => {
     expect(res.status()).toBe(200);
     const intent = await res.json();
     expect(intent.success).toBe(true);
-    expect(intent.receiverUpiId).toBe('BHARATPE.9J0E0Z0U0M847077@unitype');
-    expect(intent.receiverName).toBe('SIMON RAJKUMAR GROVER');
+    expect(intent.receiverUpiId).toBe('testcanteen@upi');
+    expect(intent.receiverName).toBe('Test Canteen Outlet');
     expect(intent.merchantId).toBe('5812');
     expect(intent.amount).toBe(80);
     expect(intent.transactionRef).toContain(`HZ_${canteenOrderId}`);
