@@ -8,6 +8,7 @@ import '../admin/nescafe_admin_dashboard.dart';
 import '../admin/lipton_admin_dashboard.dart';
 import '../admin/canteen_admin_dashboard.dart';
 import '../admin/fruit_admin_dashboard.dart';
+import '../admin/change_admin_credentials_screen.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -51,16 +52,18 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with SingleTickerPr
   void _navigateToDashboard(String email, String? outlet) {
     Widget dashboard;
     final normalized = email.toLowerCase().trim();
-    if (normalized == 'admin.nescafe@hungerzone.com' || outlet == 'Nescafe') {
+    final effectiveOutlet = (outlet ?? '').toLowerCase().trim();
+
+    if (effectiveOutlet == 'nescafe' || normalized == 'admin.nescafe@hungerzone.com') {
       dashboard = const NescafeAdminDashboard();
-    } else if (normalized == 'admin.lipton@hungerzone.com' || outlet == 'Lipton') {
+    } else if (effectiveOutlet == 'lipton' || normalized == 'admin.lipton@hungerzone.com') {
       dashboard = const LiptonAdminDashboard();
-    } else if (normalized == 'admin.canteen@hungerzone.com' || outlet == 'Canteen') {
+    } else if (effectiveOutlet == 'canteen' || normalized == 'admin.canteen@hungerzone.com') {
       dashboard = const CanteenAdminDashboard();
-    } else if (normalized == 'admin.fruit@hungerzone.com' || outlet == 'Fruit Corner') {
+    } else if (effectiveOutlet == 'fruit corner' || effectiveOutlet == 'fruit' || normalized == 'admin.fruit@hungerzone.com') {
       dashboard = const FruitAdminDashboard();
     } else {
-      return;
+      dashboard = const NescafeAdminDashboard();
     }
     Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => dashboard));
   }
@@ -275,14 +278,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with SingleTickerPr
                                         Fluttertoast.showToast(msg: msg);
                                       } else {
                                         if (!mounted) return;
-                                        final admins = [
-                                          'admin.nescafe@hungerzone.com',
-                                          'admin.lipton@hungerzone.com',
-                                          'admin.canteen@hungerzone.com',
-                                          'admin.fruit@hungerzone.com',
-                                        ];
-                                        if (admins.contains(email.toLowerCase()) || auth.isAdmin) {
-                                          _navigateToDashboard(email, auth.outletName);
+                                        if (auth.isAdmin || auth.isKnownAdmin(email)) {
+                                          _navigateToDashboard(email, auth.outletName ?? auth.getOutletForAdmin(email));
                                         } else {
                                           Fluttertoast.showToast(msg: "Unauthorized admin access");
                                           await auth.logout();
@@ -324,7 +321,32 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> with SingleTickerPr
                       ),
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 20),
+
+                    // Handover / Change Credentials Link
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ChangeAdminCredentialsScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.manage_accounts_rounded, color: primaryCoral, size: 18),
+                        label: Text(
+                          "Handover setup? Change admin credentials",
+                          style: GoogleFonts.poppins(
+                            color: primaryCoral,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
 
                     // Help notice
                     Center(

@@ -61,13 +61,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   void _navigateToCorrectAdminDashboard(String email, String? outlet) {
     Widget dashboard;
     final normalized = email.toLowerCase().trim();
-    if (normalized == 'admin.nescafe@hungerzone.com' || outlet == 'Nescafe') {
+    final effectiveOutlet = (outlet ?? '').toLowerCase().trim();
+    if (effectiveOutlet == 'nescafe' || normalized == 'admin.nescafe@hungerzone.com') {
       dashboard = const NescafeAdminDashboard();
-    } else if (normalized == 'admin.lipton@hungerzone.com' || outlet == 'Lipton') {
+    } else if (effectiveOutlet == 'lipton' || normalized == 'admin.lipton@hungerzone.com') {
       dashboard = const LiptonAdminDashboard();
-    } else if (normalized == 'admin.canteen@hungerzone.com' || outlet == 'Canteen') {
+    } else if (effectiveOutlet == 'canteen' || normalized == 'admin.canteen@hungerzone.com') {
       dashboard = const CanteenAdminDashboard();
-    } else if (normalized == 'admin.fruit@hungerzone.com' || outlet == 'Fruit Corner') {
+    } else if (effectiveOutlet == 'fruit corner' || effectiveOutlet == 'fruit' || normalized == 'admin.fruit@hungerzone.com') {
       dashboard = const FruitAdminDashboard();
     } else {
       dashboard = const HomeScreen();

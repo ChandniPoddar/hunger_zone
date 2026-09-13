@@ -28,6 +28,7 @@ class _CartScreenState extends State<CartScreen>
 
   final String apiUrl = "${AppConstants.baseUrl}/api/orders";
   final UpiIndia _upiIndia = UpiIndia();
+  bool _isProcessingPayment = false;
 
   @override
   void initState() {
@@ -199,78 +200,167 @@ class _CartScreenState extends State<CartScreen>
     );
   }
 
-  Future<void> _startUpiTransaction(UpiApp appMeta, double amount) async {
-    try {
-      final String transactionRef = "UPI${DateTime.now().millisecondsSinceEpoch}";
-      
-      // If merchantCode is provided in .env (e.g. 5812 for Food & Restaurant), pass it to the intent
-      final String? merchantId = AppConstants.merchantCode.trim().isNotEmpty
-          ? AppConstants.merchantCode.trim()
-          : null;
+  Future<void> _handleUpiPaymentFlow(double amount) async {
+    if (_isProcessingPayment) return;
+    setState(() => _isProcessingPayment = true);
 
+    final cart = context.read<CartProvider>();
+    final auth = context.read<AuthService>();
+    final outlet = widget.outletName ?? cart.currentOutletName ?? 'Canteen';
+    final vendorId = cart.currentVendorId ?? CartProvider.getNormalizedVendorId(outlet);
+
+    // Show initial processing loader
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B6B)),
+        ),
+      ),
+    );
+
+    try {
+      // 1. Create order on backend (Backend validates vendor and calculates total server-side)
+      final items = cart.items.values.map((item) {
+        return {
+          "id": item.foodItem.id,
+          "name": item.foodItem.name,
+          "quantity": item.quantity,
+          "price": item.foodItem.price,
+        };
+      }).toList();
+
+      final orderRes = await http.post(
+        Uri.parse("${AppConstants.baseUrl}/api/orders"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "vendorId": vendorId,
+          "outlet": outlet,
+          "userName": auth.name ?? "Guest",
+          "userEmail": auth.email ?? "",
+          "userPhone": auth.phoneNumber ?? "",
+          "paymentMethod": "UPI",
+          "items": items,
+        }),
+      );
+
+      final orderData = jsonDecode(orderRes.body);
+      if (orderRes.statusCode != 200 && orderRes.statusCode != 201) {
+        if (mounted) Navigator.pop(context); // Dismiss loader
+        setState(() => _isProcessingPayment = false);
+        Fluttertoast.showToast(msg: orderData["message"] ?? "Failed to create order");
+        return;
+      }
+
+      final createdOrder = orderData["order"];
+      final String orderId = createdOrder["orderId"];
+
+      // 2. Request dynamic payment intent from backend for this vendor & order
+      final intentRes = await http.post(
+        Uri.parse("${AppConstants.baseUrl}/api/payment/create-intent"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "orderId": orderId,
+          "vendorId": vendorId,
+        }),
+      );
+
+      final intentData = jsonDecode(intentRes.body);
+      if (intentRes.statusCode != 200) {
+        if (mounted) Navigator.pop(context); // Dismiss loader
+        setState(() => _isProcessingPayment = false);
+        Fluttertoast.showToast(
+          msg: intentData["message"] ?? "Payment is currently unavailable for this vendor.",
+          toastLength: Toast.LENGTH_LONG,
+        );
+        return;
+      }
+
+      // 3. Fetch installed UPI apps
+      final List<UpiApp> appMetaList = await _upiIndia.getAllUpiApps();
+
+      if (mounted) {
+        Navigator.pop(context); // Dismiss loader
+      }
+
+      if (!mounted) {
+        setState(() => _isProcessingPayment = false);
+        return;
+      }
+
+      // 4. Prompt user to select their UPI app
+      final finalAmount = (intentData["amount"] as num).toDouble();
+      final selectedApp = await _showUpiAppSelector(context, finalAmount, appMetaList);
+
+      if (selectedApp == null) {
+        setState(() => _isProcessingPayment = false);
+        return;
+      }
+
+      // 5. Start UPI Intent using ONLY backend-supplied vendor credentials
       final UpiResponse response = await _upiIndia.startTransaction(
-        app: appMeta,
-        receiverUpiId: AppConstants.receiverUpiAddress.trim(),
-        receiverName: AppConstants.receiverName.trim(),
-        transactionRefId: transactionRef,
-        transactionNote: 'Hunger Zone Order',
-        amount: amount,
-        merchantId: merchantId,
+        app: selectedApp,
+        receiverUpiId: intentData["receiverUpiId"],
+        receiverName: intentData["receiverName"],
+        transactionRefId: intentData["transactionRef"],
+        transactionNote: 'Hunger Zone Order #$orderId',
+        amount: finalAmount,
+        merchantId: intentData["merchantId"],
       );
 
       debugPrint("UPI Response status: ${response.status}");
       debugPrint("UPI Response approvalRef: ${response.approvalRefNo}");
 
+      // 6. Verify and update payment status on backend
+      String statusStr = "FAILURE";
       if (response.status == UpiPaymentStatus.SUCCESS) {
-        await _handlePaymentSuccess(transactionRef, paymentMethod: "UPI");
+        statusStr = "SUCCESS";
       } else if (response.status == UpiPaymentStatus.SUBMITTED) {
+        statusStr = "SUBMITTED";
+      }
+
+      await http.post(
+        Uri.parse("${AppConstants.baseUrl}/api/payment/verify"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "orderId": orderId,
+          "transactionRef": intentData["transactionRef"],
+          "status": statusStr,
+          "approvalRefNo": response.approvalRefNo,
+        }),
+      );
+
+      if (response.status == UpiPaymentStatus.SUCCESS) {
+        cart.clearCart();
+        NotificationService.showNotification(
+          id: 1,
+          title: "Payment Successful!",
+          body: "Your order for $outlet has been placed.",
+        );
+        Fluttertoast.showToast(msg: "Payment successful! Order placed.");
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      } else if (response.status == UpiPaymentStatus.SUBMITTED) {
+        cart.clearCart();
         Fluttertoast.showToast(msg: "Transaction Submitted. Check status in your bank app.");
+        if (mounted) {
+          Navigator.pop(context);
+        }
       } else {
         Fluttertoast.showToast(msg: "Payment Failed or Cancelled");
       }
     } catch (e) {
-      debugPrint("UPI Error: $e");
-      Fluttertoast.showToast(msg: "Transaction failed: $e");
-    }
-  }
-
-  Future<void> _openCheckout(double amount) async {
-    final nav = Navigator.of(context);
-    final currentContext = context;
-
-    try {
-      // Show loading while fetching installed UPI apps
-      showDialog(
-        context: currentContext,
-        barrierDismissible: false,
-        builder: (ctx) => const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFF6B6B)),
-          ),
-        ),
-      );
-
-      final List<UpiApp> appMetaList =
-          await _upiIndia.getAllUpiApps();
-      
+      debugPrint("UPI Checkout error: $e");
       if (mounted) {
-        nav.pop(); // Dismiss loader
-      } else {
-        return;
+        try { Navigator.pop(context); } catch (_) {}
       }
-
-      if (!mounted) return;
-      final selectedApp = await _showUpiAppSelector(context, amount, appMetaList);
-      
-      if (selectedApp != null && mounted) {
-        await _startUpiTransaction(selectedApp, amount);
-      }
-    } catch (e) {
+      Fluttertoast.showToast(msg: "Transaction error: $e");
+    } finally {
       if (mounted) {
-        nav.pop(); // Dismiss loader if still open
+        setState(() => _isProcessingPayment = false);
       }
-      debugPrint("Checkout Error: $e");
-      Fluttertoast.showToast(msg: "Error initializing payment: $e");
     }
   }
 
@@ -339,7 +429,7 @@ class _CartScreenState extends State<CartScreen>
               InkWell(
                 onTap: () {
                   Navigator.pop(ctx);
-                  _openCheckout(amount);
+                  _handleUpiPaymentFlow(amount);
                 },
                 borderRadius: BorderRadius.circular(18),
                 child: Container(
@@ -412,8 +502,7 @@ class _CartScreenState extends State<CartScreen>
               InkWell(
                 onTap: () {
                   Navigator.pop(ctx);
-                  final String orderId = "COD${DateTime.now().millisecondsSinceEpoch}";
-                  _handlePaymentSuccess(orderId, paymentMethod: "Cash at Counter");
+                  _handleCashAtCounter(amount);
                 },
                 borderRadius: BorderRadius.circular(18),
                 child: Container(
@@ -481,60 +570,64 @@ class _CartScreenState extends State<CartScreen>
     );
   }
 
-  Future<void> _handlePaymentSuccess(String orderId, {String paymentMethod = "UPI"}) async {
+  Future<void> _handleCashAtCounter(double amount) async {
+    if (_isProcessingPayment) return;
+    setState(() => _isProcessingPayment = true);
+
     final cart = context.read<CartProvider>();
     final auth = context.read<AuthService>();
-
-    final items = cart.items.values.map((item) {
-      return {
-        "name": item.foodItem.name,
-        "quantity": item.quantity,
-        "price": item.foodItem.price,
-      };
-    }).toList();
-
-    final total = cart.items.values.fold(
-        0.0, (sum, item) => sum + (item.foodItem.price * item.quantity));
+    final outlet = widget.outletName ?? cart.currentOutletName ?? 'Canteen';
+    final vendorId = cart.currentVendorId ?? CartProvider.getNormalizedVendorId(outlet);
 
     try {
+      final items = cart.items.values.map((item) {
+        return {
+          "id": item.foodItem.id,
+          "name": item.foodItem.name,
+          "quantity": item.quantity,
+          "price": item.foodItem.price,
+        };
+      }).toList();
+
       final res = await http.post(
         Uri.parse(apiUrl),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "orderId": orderId,
-          "outlet": widget.outletName ?? "Hunger Zone",
+          "vendorId": vendorId,
+          "outlet": outlet,
           "userName": auth.name ?? "Guest",
           "userEmail": auth.email ?? "",
           "userPhone": auth.phoneNumber ?? "",
-          "paymentMethod": paymentMethod,
+          "paymentMethod": "Cash at Counter",
           "items": items,
-          "total": total,
-          "status": "Pending"
         }),
       );
 
+      final data = jsonDecode(res.body);
+
       if (res.statusCode == 200 || res.statusCode == 201) {
+        final total = (data["order"]?["total"] ?? amount).toDouble();
         cart.clearCart();
         NotificationService.showNotification(
           id: 1,
           title: "Order Placed!",
-          body: paymentMethod == "Cash at Counter"
-              ? "Your order for ${widget.outletName ?? 'Hunger Zone'} has been placed. Please pay ₹${total.toStringAsFixed(0)} at the counter."
-              : "Your order for ${widget.outletName ?? 'Hunger Zone'} has been received.",
+          body: "Your order for $outlet has been placed. Please pay ₹${total.toStringAsFixed(0)} at the counter.",
         );
         Fluttertoast.showToast(
-          msg: paymentMethod == "Cash at Counter"
-              ? "Order placed! Please pay ₹${total.toStringAsFixed(0)} at counter."
-              : "Payment successful! Order placed.",
+          msg: "Order placed! Please pay ₹${total.toStringAsFixed(0)} at counter.",
         );
         if (mounted) {
           Navigator.pop(context);
         }
       } else {
-        Fluttertoast.showToast(msg: "Order failed to save to DB");
+        Fluttertoast.showToast(msg: data["message"] ?? "Failed to save order");
       }
     } catch (e) {
       Fluttertoast.showToast(msg: "Server error saving order: $e");
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessingPayment = false);
+      }
     }
   }
 
@@ -726,7 +819,7 @@ class _CartScreenState extends State<CartScreen>
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                           elevation: 0,
                         ),
-                        onPressed: () => _showPaymentMethodSelector(totalAmount),
+                        onPressed: _isProcessingPayment ? null : () => _showPaymentMethodSelector(totalAmount),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [

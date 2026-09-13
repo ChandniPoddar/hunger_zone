@@ -23,7 +23,9 @@ class AuthService extends ChangeNotifier {
   static const String _sessionKey = 'login_timestamp';
   static const int _oneWeekMillis = 7 * 24 * 60 * 60 * 1000;
 
-  AuthService();
+  AuthService() {
+    _loadAdminOverrides();
+  }
 
   /// ✅ USER OBJECT FOR PROFILE SCREEN
   Map<String, dynamic>? get currentUser {
@@ -37,7 +39,7 @@ class AuthService extends ChangeNotifier {
     };
   }
 
-  /// ADMIN LOGIN SHORTCUTS (Using Email Addresses)
+  /// ADMIN LOGIN CREDENTIALS (Default & Custom Overrides)
   final Map<String, Map<String, String>> _adminCredentials = {
     'admin.nescafe@hungerzone.com': {'pass': 'nescafe123', 'outlet': 'Nescafe'},
     'admin.lipton@hungerzone.com': {'pass': 'lipton123', 'outlet': 'Lipton'},
@@ -49,6 +51,40 @@ class AuthService extends ChangeNotifier {
 
   bool get isAdmin => role == 'admin' || role?.startsWith('admin_') == true;
 
+  bool isKnownAdmin(String? checkEmail) {
+    if (checkEmail == null) return false;
+    final normalized = checkEmail.trim().toLowerCase();
+    return _adminCredentials.containsKey(normalized);
+  }
+
+  String? getOutletForAdmin(String? checkEmail) {
+    if (checkEmail == null) return null;
+    final normalized = checkEmail.trim().toLowerCase();
+    return _adminCredentials[normalized]?['outlet'];
+  }
+
+  Future<void> _loadAdminOverrides() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final customJson = prefs.getString('custom_admin_credentials');
+      if (customJson != null) {
+        final Map<String, dynamic> decoded = jsonDecode(customJson);
+        decoded.forEach((emailKey, val) {
+          if (val is Map) {
+            final outlet = val['outlet']?.toString();
+            if (outlet != null) {
+              _adminCredentials.removeWhere((k, v) => v['outlet']?.toLowerCase() == outlet.toLowerCase());
+            }
+            _adminCredentials[emailKey.toLowerCase().trim()] = {
+              'pass': val['pass'].toString(),
+              'outlet': outlet ?? '',
+            };
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
   void setLoading(bool value) {
     _loading = value;
     notifyListeners();
@@ -57,6 +93,7 @@ class AuthService extends ChangeNotifier {
   /// SESSION RESTORE & EXPIRY CHECK (1 WEEK PERSISTENT)
   Future<bool> restoreSession() async {
     try {
+      await _loadAdminOverrides();
       final prefs = await SharedPreferences.getInstance();
       final loginTime = prefs.getInt(_sessionKey);
 
@@ -317,6 +354,101 @@ class AuthService extends ChangeNotifier {
       return data["message"] ?? "Verification failed";
     } catch (e) {
       return "Connection error";
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /// ✅ CHANGE ADMIN CREDENTIALS (MongoDB & Local Device Persistence)
+  Future<String?> changeAdminCredentials({
+    required String currentEmail,
+    required String currentPassword,
+    required String newEmail,
+    String? newPassword,
+  }) async {
+    try {
+      setLoading(true);
+      final normCurrent = currentEmail.trim().toLowerCase();
+      final normNew = newEmail.trim().toLowerCase();
+      final effectiveNewPass = (newPassword != null && newPassword.trim().isNotEmpty)
+          ? newPassword.trim()
+          : currentPassword.trim();
+
+      String? backendOutlet;
+      // 1. Send update request to Backend
+      try {
+        final response = await http.post(
+          Uri.parse("$baseUrl/api/admin/change-credentials"),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({
+            "currentEmail": normCurrent,
+            "currentPassword": currentPassword.trim(),
+            "newEmail": normNew,
+            "newPassword": (newPassword != null && newPassword.trim().isNotEmpty) ? newPassword.trim() : null,
+          }),
+        );
+
+        final resData = jsonDecode(response.body);
+        if (response.statusCode == 200) {
+          backendOutlet = resData['admin']?['outletName'];
+        } else {
+          return resData['message'] ?? "Failed to update admin credentials on server";
+        }
+      } catch (e) {
+        debugPrint("Server communication failed during credential update: $e");
+        // Check if current matches local stored admin
+        if (!_adminCredentials.containsKey(normCurrent) ||
+            _adminCredentials[normCurrent]!['pass'] != currentPassword.trim()) {
+          return "Unable to verify current credentials. Please check your network and password.";
+        }
+      }
+
+      // 2. Resolve outlet
+      String outlet = backendOutlet ??
+          _adminCredentials[normCurrent]?['outlet'] ??
+          outletName ??
+          'Nescafe';
+
+      // 3. Update local in-memory admin map
+      _adminCredentials.removeWhere((k, v) => v['outlet']?.toLowerCase() == outlet.toLowerCase());
+      _adminCredentials[normNew] = {
+        'pass': effectiveNewPass,
+        'outlet': outlet,
+      };
+
+      // 4. Persist to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      Map<String, dynamic> overrides = {};
+      final existingJson = prefs.getString('custom_admin_credentials');
+      if (existingJson != null) {
+        try {
+          overrides = jsonDecode(existingJson);
+        } catch (_) {}
+      }
+      overrides.removeWhere((k, v) => v is Map && v['outlet']?.toString().toLowerCase() == outlet.toLowerCase());
+      overrides[normNew] = {
+        'pass': effectiveNewPass,
+        'outlet': outlet,
+      };
+      await prefs.setString('custom_admin_credentials', jsonEncode(overrides));
+
+      // 5. If currently logged in as this admin, update session
+      if (email?.trim().toLowerCase() == normCurrent) {
+        email = normNew;
+        outletName = outlet;
+        role = "admin";
+        name = "$outlet Admin";
+        await prefs.setString('email', normNew);
+        await prefs.setString('phoneNumber', normNew);
+        await prefs.setString('outletName', outlet);
+        await prefs.setString('name', "$outlet Admin");
+        syncFcmToken();
+      }
+
+      notifyListeners();
+      return null;
+    } catch (e) {
+      return "Unexpected error: $e";
     } finally {
       setLoading(false);
     }

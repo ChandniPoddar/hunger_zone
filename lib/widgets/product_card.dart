@@ -190,20 +190,7 @@ class ProductCard extends StatelessWidget {
                           ),
                         ),
                         InkWell(
-                          onTap: foodItem.isAvailable ? () {
-                            context.read<CartProvider>().addItem(foodItem);
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                backgroundColor: const Color(0xFFFF6B6B),
-                                content: Text(
-                                  '${foodItem.name} added to cart',
-                                  style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
-                          } : null,
+                          onTap: foodItem.isAvailable ? () => _handleAddToCart(context) : null,
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
                             decoration: BoxDecoration(
@@ -243,6 +230,81 @@ class ProductCard extends StatelessWidget {
         child: Text("🍔", style: TextStyle(fontSize: 32)),
       ),
     );
+  }
+
+  void _handleAddToCart(BuildContext context) {
+    final cart = context.read<CartProvider>();
+    final conflictVendor = cart.addItem(foodItem);
+
+    if (conflictVendor != null) {
+      final newVendor = CartProvider.getNormalizedVendorName(foodItem.category);
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.swap_horiz_rounded, color: Color(0xFFFF6B6B)),
+              const SizedBox(width: 8),
+              Text(
+                "Different Vendor",
+                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Text(
+            "Your cart contains items from $conflictVendor. You can order from only one vendor at a time.\n\nWould you like to clear your cart and start ordering from $newVendor?",
+            style: GoogleFonts.poppins(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                "Cancel",
+                style: GoogleFonts.poppins(color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF6B6B),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                cart.clearCartAndAdd(foodItem);
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: const Color(0xFFFF6B6B),
+                    content: Text(
+                      'Cart cleared! Added ${foodItem.name} from $newVendor',
+                      style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                    duration: const Duration(seconds: 1),
+                  ),
+                );
+              },
+              child: Text(
+                "Clear & Add",
+                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFFFF6B6B),
+          content: Text(
+            '${foodItem.name} added to cart',
+            style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
   }
 }
 

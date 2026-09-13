@@ -269,6 +269,33 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 ),
                               ],
                             ),
+                            if (order['paymentMethod'] != null || order['paymentStatus'] != null)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "Payment",
+                                    style: TextStyle(
+                                      color: context.subTextColor,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                  Text(
+                                    order['paymentMethod'] == 'Cash at Counter'
+                                        ? 'Cash at Counter'
+                                        : (order['paymentStatus'] == 'SUCCESS' ? 'UPI (Paid)' : 'UPI (${order['paymentStatus'] ?? 'Pending'})'),
+                                    style: TextStyle(
+                                      color: order['paymentStatus'] == 'SUCCESS'
+                                          ? const Color(0xFF10B981)
+                                          : (order['paymentMethod'] == 'Cash at Counter'
+                                              ? const Color(0xFFF59E0B)
+                                              : context.textColor),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [

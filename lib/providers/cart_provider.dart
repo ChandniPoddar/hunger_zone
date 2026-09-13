@@ -26,94 +26,143 @@ class CartProvider with ChangeNotifier {
     return total;
   }
 
-  void addItem(FoodItem foodItem) {
+  String? _currentVendorId;
+  String? _currentVendorName;
+  String? _currentOutletName;
+
+  String? get currentVendorId => _currentVendorId;
+  String? get currentVendorName => _currentVendorName;
+  String? get currentOutletName => _currentOutletName;
+
+  static String getNormalizedVendorId(String category) {
+    final clean = category.toLowerCase().trim();
+    if (clean.contains('nescafe')) return 'nescafe';
+    if (clean.contains('lipton')) return 'lipton';
+    if (clean.contains('fruit')) return 'fruit_corner';
+    return 'canteen';
+  }
+
+  static String getNormalizedVendorName(String category) {
+    final clean = category.toLowerCase().trim();
+    if (clean.contains('nescafe')) return 'Nescafé';
+    if (clean.contains('lipton')) return 'Lipton';
+    if (clean.contains('fruit')) return 'Fruit Corner';
+    return 'Main Canteen';
+  }
+
+  static String normalizeOutlet(String category) {
+    final clean = category.toLowerCase().trim();
+    if (clean.contains('nescafe')) return 'Nescafe';
+    if (clean.contains('lipton')) return 'Lipton';
+    if (clean.contains('fruit')) return 'Fruit Corner';
+    return 'Canteen';
+  }
+
+  String getNormalizedOutlet(String category) => normalizeOutlet(category);
+
+  /// Adds item to cart. Returns existing vendor name if there is a vendor conflict, otherwise null.
+  String? addItem(FoodItem foodItem) {
+    final itemVendorId = getNormalizedVendorId(foodItem.category);
+    final itemVendorName = getNormalizedVendorName(foodItem.category);
+    final itemOutlet = getNormalizedOutlet(foodItem.category);
+
+    // Enforce ONE ORDER = ONE VENDOR
+    if (_items.isNotEmpty && _currentVendorId != null && _currentVendorId != itemVendorId) {
+      return _currentVendorName ?? _currentOutletName ?? 'another vendor';
+    }
+
+    _currentVendorId = itemVendorId;
+    _currentVendorName = itemVendorName;
+    _currentOutletName = itemOutlet;
 
     if (_items.containsKey(foodItem.id)) {
-
       _items.update(
         foodItem.id,
-            (existingCartItem) => CartItem(
+        (existingCartItem) => CartItem(
           id: existingCartItem.id,
           foodItem: existingCartItem.foodItem,
           quantity: existingCartItem.quantity + 1,
         ),
       );
-
     } else {
-
       _items.putIfAbsent(
         foodItem.id,
-            () => CartItem(
+        () => CartItem(
           id: DateTime.now().toString(),
           foodItem: foodItem,
           quantity: 1,
         ),
       );
-
     }
 
+    notifyListeners();
+    return null;
+  }
+
+  /// Clears cart and adds the item from the new vendor
+  void clearCartAndAdd(FoodItem foodItem) {
+    _items.clear();
+    _currentVendorId = getNormalizedVendorId(foodItem.category);
+    _currentVendorName = getNormalizedVendorName(foodItem.category);
+    _currentOutletName = getNormalizedOutlet(foodItem.category);
+
+    _items.putIfAbsent(
+      foodItem.id,
+      () => CartItem(
+        id: DateTime.now().toString(),
+        foodItem: foodItem,
+        quantity: 1,
+      ),
+    );
     notifyListeners();
   }
 
   void removeSingleItem(String foodId) {
-
     if (!_items.containsKey(foodId)) return;
 
     if (_items[foodId]!.quantity > 1) {
-
       _items.update(
         foodId,
-            (existingCartItem) => CartItem(
+        (existingCartItem) => CartItem(
           id: existingCartItem.id,
           foodItem: existingCartItem.foodItem,
           quantity: existingCartItem.quantity - 1,
         ),
       );
-
     } else {
-
       _items.remove(foodId);
-
+      if (_items.isEmpty) {
+        _currentVendorId = null;
+        _currentVendorName = null;
+        _currentOutletName = null;
+      }
     }
 
     notifyListeners();
   }
 
   void removeItem(String foodId) {
-
     _items.remove(foodId);
-
+    if (_items.isEmpty) {
+      _currentVendorId = null;
+      _currentVendorName = null;
+      _currentOutletName = null;
+    }
     notifyListeners();
-
   }
 
   // ✅ Used in cart_screen.dart
   void clearCart() {
-
     _items.clear();
-
+    _currentVendorId = null;
+    _currentVendorName = null;
+    _currentOutletName = null;
     notifyListeners();
-
   }
 
   // (kept for backward compatibility if used elsewhere)
   void clear() {
-
     clearCart();
-
-  }
-
-  String getNormalizedOutlet(String category) {
-
-    String cat = category.trim();
-
-    if (cat.contains('Nescafe')) return 'Nescafe';
-    if (cat.contains('Lipton')) return 'Lipton';
-    if (cat.contains('Canteen')) return 'Canteen';
-    if (cat.contains('Fruit')) return 'Fruit Corner';
-
-    return cat;
-
   }
 
   Future<String?> placeOrder({
@@ -208,11 +257,5 @@ class CartProvider with ChangeNotifier {
     }
 
   }
-
-}
-
-extension on CartItem {
-
-  double get totalPrice => foodItem.price * quantity;
 
 }

@@ -1,4 +1,6 @@
 const Order = require("../models/Order");
+const Vendor = require("../models/Vendor");
+const { getItemModel } = require("../models/Item");
 const {
   sendNotificationToOutlet,
   sendNotificationToUser,
@@ -39,30 +41,122 @@ function getStatusNotification(status, outlet, orderId) {
 }
 
 // ─────────────────────────────────────────────
-// POST /api/orders — Create a new order
+// POST /api/orders — Create a new order with multi-vendor validation & server-side total
 // ─────────────────────────────────────────────
 exports.createOrder = async (req, res) => {
   try {
-    const order = new Order(req.body);
-    await order.save();
-    console.log(`[ORDER] New order created: ${order.orderId} for outlet: ${order.outlet}`);
+    const {
+      orderId,
+      vendorId,
+      outlet,
+      userName,
+      userEmail,
+      userPhone,
+      items,
+      paymentMethod,
+    } = req.body;
 
-    // ── FCM: Notify the correct outlet admin (non-blocking)
-    const itemList = (order.items || []).map((i) => `${i.quantity}x ${i.name}`).join(", ");
-    sendNotificationToOutlet(
-      order.outlet,
-      `🍔 New Order #${order.orderId}!`,
-      `New order for ${order.outlet} - ₹${order.total}. Items: ${itemList}`,
-      {
-        type: "new_order",
-        orderId: order.orderId || "",
-        outlet: order.outlet || "",
-        total: String(order.total || 0),
-        items: itemList,
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "Order must contain at least one item." });
+    }
+
+    // 1. Resolve Vendor
+    const effectiveVendorKey = (vendorId || outlet || "").toLowerCase().trim();
+    const vendor = await Vendor.findOne({
+      $or: [
+        { vendorId: effectiveVendorKey },
+        { outletName: new RegExp(`^${effectiveVendorKey}$`, "i") },
+        { name: new RegExp(`^${effectiveVendorKey}$`, "i") },
+      ],
+    });
+
+    if (!vendor) {
+      return res.status(400).json({ message: "Vendor not found." });
+    }
+
+    if (!vendor.isActive) {
+      return res.status(400).json({ message: "This vendor is currently unavailable." });
+    }
+
+    // 2. Server-side price calculation (never trust client total)
+    const ItemModel = getItemModel(vendor.outletName);
+    let calculatedTotal = 0;
+    const validatedItems = [];
+
+    for (const item of items) {
+      const qty = Math.max(1, parseInt(item.quantity || 1, 10));
+      let price = Number(item.price || 0);
+
+      // Attempt to look up current price from DB
+      if (item.id || item._id) {
+        const dbItem = await ItemModel.findById(item.id || item._id);
+        if (dbItem && typeof dbItem.price === "number") {
+          price = dbItem.price;
+        }
+      } else if (item.name) {
+        const dbItem = await ItemModel.findOne({ name: new RegExp(`^${item.name.trim()}$`, "i") });
+        if (dbItem && typeof dbItem.price === "number") {
+          price = dbItem.price;
+        }
       }
-    ).catch((err) => console.error("[FCM] Admin notification failed (non-fatal):", err.message));
 
-    res.json({ message: "Order placed", order });
+      calculatedTotal += price * qty;
+      validatedItems.push({
+        name: item.name,
+        quantity: qty,
+        price,
+      });
+    }
+
+    const effectiveOrderId = orderId || `ORD${Date.now()}`;
+    const effectivePaymentMethod = paymentMethod === "Cash at Counter" ? "Cash at Counter" : "UPI";
+    const initialPaymentStatus = effectivePaymentMethod === "Cash at Counter" ? "COD" : "PENDING";
+
+    const order = new Order({
+      orderId: effectiveOrderId,
+      vendorId: vendor.vendorId,
+      outlet: vendor.outletName,
+      userName: userName || "Customer",
+      userEmail: userEmail ? userEmail.toLowerCase().trim() : null,
+      userPhone: userPhone || null,
+      items: validatedItems,
+      total: calculatedTotal,
+      paymentMethod: effectivePaymentMethod,
+      paymentStatus: initialPaymentStatus,
+      status: "Pending",
+    });
+
+    await order.save();
+    console.log(`[ORDER] Created order: ${order.orderId} for vendor: ${vendor.name} (₹${order.total}, Payment: ${order.paymentStatus})`);
+
+    // If COD, notify outlet admin immediately
+    if (effectivePaymentMethod === "Cash at Counter") {
+      const itemList = validatedItems.map((i) => `${i.quantity}x ${i.name}`).join(", ");
+      sendNotificationToOutlet(
+        order.outlet,
+        `🍔 New COD Order #${order.orderId}!`,
+        `New order for ${order.outlet} - ₹${order.total}. Items: ${itemList}`,
+        {
+          type: "new_order",
+          orderId: order.orderId || "",
+          outlet: order.outlet || "",
+          total: String(order.total || 0),
+          items: itemList,
+          paymentMethod: "Cash at Counter",
+        }
+      ).catch((err) => console.error("[FCM] Admin notification failed (non-fatal):", err.message));
+    }
+
+    res.status(201).json({
+      message: "Order placed successfully",
+      order,
+      vendor: {
+        vendorId: vendor.vendorId,
+        name: vendor.name,
+        outletName: vendor.outletName,
+        isPaymentConfigured: vendor.isPaymentConfigured,
+      },
+    });
   } catch (error) {
     console.error("[ORDER] createOrder error:", error.message);
     res.status(500).json({ message: error.message });

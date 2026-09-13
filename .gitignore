@@ -56,3 +56,9 @@ node_modules/
 .idea/
 .vscode/
 *.iml
+
+# Test Results
+test-results/
+**/test-results/
+test-results.json
+**/test-results.json

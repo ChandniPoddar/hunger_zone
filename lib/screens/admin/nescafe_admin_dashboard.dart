@@ -12,6 +12,8 @@ import '../../providers/outlet_provider.dart';
 import '../auth/login_screen.dart';
 import '../auth/add_item_screen.dart';
 import 'manage_items_screen.dart';
+import 'change_admin_credentials_screen.dart';
+import 'vendor_payment_settings_screen.dart';
 
 class NescafeAdminDashboard extends StatefulWidget {
   const NescafeAdminDashboard({super.key});
@@ -146,17 +148,54 @@ class _NescafeAdminDashboardState extends State<NescafeAdminDashboard> with Tick
                   }
                 },
               ),
-              Container(
-                decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: IconButton(
-                  icon: Icon(Icons.logout_rounded, color: primaryCoral),
-                  onPressed: () async {
-                    await context.read<AuthService>().logout();
-                    if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
-                    }
-                  },
-                ),
+              Row(
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    child: IconButton(
+                      icon: Icon(Icons.account_balance_wallet_rounded, color: primaryCoral),
+                      tooltip: "UPI & Payment Setup",
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const VendorPaymentSettingsScreen(initialVendorId: 'nescafe'),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    child: IconButton(
+                      icon: Icon(Icons.manage_accounts_rounded, color: primaryCoral),
+                      tooltip: "Account Settings",
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ChangeAdminCredentialsScreen(initialOutlet: 'Nescafe'),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    child: IconButton(
+                      icon: Icon(Icons.logout_rounded, color: primaryCoral),
+                      tooltip: "Logout",
+                      onPressed: () async {
+                        final nav = Navigator.of(context);
+                        await context.read<AuthService>().logout();
+                        if (!mounted) return;
+                        nav.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
+                      },
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

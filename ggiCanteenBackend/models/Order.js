@@ -21,6 +21,22 @@ const orderSchema = new mongoose.Schema({
 
   total: Number,
 
+  // Multi-vendor reference
+  vendorId: { type: String, default: null },
+
+  // Separate payment state tracking
+  paymentStatus: {
+    type: String,
+    default: "PENDING",
+    enum: ["PENDING", "SUCCESS", "FAILED", "SUBMITTED", "COD"],
+  },
+  paymentMethod: {
+    type: String,
+    default: "UPI", // "UPI" | "Cash at Counter"
+  },
+  transactionRef: { type: String, default: null },
+  approvalRefNo: { type: String, default: null },
+
   status: {
     type: String,
     default: "Pending",

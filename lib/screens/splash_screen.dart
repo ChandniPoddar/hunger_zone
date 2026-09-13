@@ -68,14 +68,14 @@ class _SplashScreenState extends State<SplashScreen>
     if (hasValidSession && (auth.email != null || auth.phoneNumber != null)) {
       if (auth.isAdmin || auth.role == 'operator') {
         final email = auth.email?.toLowerCase().trim();
-        final outlet = auth.outletName;
-        if (email == 'admin.nescafe@hungerzone.com' || outlet == 'Nescafe' || email == '9876543210') {
+        final effectiveOutlet = (auth.outletName ?? auth.getOutletForAdmin(email) ?? '').toLowerCase().trim();
+        if (effectiveOutlet == 'nescafe' || email == 'admin.nescafe@hungerzone.com' || email == '9876543210') {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const NescafeAdminDashboard()));
-        } else if (email == 'admin.lipton@hungerzone.com' || outlet == 'Lipton' || email == '9876543211') {
+        } else if (effectiveOutlet == 'lipton' || email == 'admin.lipton@hungerzone.com' || email == '9876543211') {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LiptonAdminDashboard()));
-        } else if (email == 'admin.canteen@hungerzone.com' || outlet == 'Canteen' || email == '9876543212') {
+        } else if (effectiveOutlet == 'canteen' || email == 'admin.canteen@hungerzone.com' || email == '9876543212') {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const CanteenAdminDashboard()));
-        } else if (email == 'admin.fruit@hungerzone.com' || outlet == 'Fruit Corner' || email == '9876543213') {
+        } else if (effectiveOutlet == 'fruit corner' || effectiveOutlet == 'fruit' || email == 'admin.fruit@hungerzone.com' || email == '9876543213') {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const FruitAdminDashboard()));
         } else {
           Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const OperatorUserScreen()));
@@ -227,19 +227,46 @@ class _SplashScreenState extends State<SplashScreen>
 
           // Bottom Signature
           Positioned(
-            bottom: 36,
+            bottom: 30,
             left: 0,
             right: 0,
-            child: Center(
-              child: Text(
-                "Fast • Fresh • Seamless",
-                style: GoogleFonts.poppins(
-                  color: Colors.white30,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 2,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Fast • Fresh • Seamless",
+                  style: GoogleFonts.poppins(
+                    color: Colors.white30,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 2,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Developed by ",
+                      style: GoogleFonts.poppins(
+                        color: Colors.white60,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    Text(
+                      "Chandni Poddar",
+                      style: GoogleFonts.poppins(
+                        color: primaryGradientEnd,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],

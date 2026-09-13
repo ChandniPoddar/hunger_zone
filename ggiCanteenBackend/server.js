@@ -63,6 +63,8 @@ mongoose
     } catch (err) {
       // Ignore if index doesn't exist
     }
+    await seedDefaultAdmins();
+    await seedDefaultVendors();
   })
   .catch((error) => {
     console.error('❌ MongoDB connection error:', error);
@@ -73,15 +75,114 @@ mongoose
 // Models
 // ─────────────────────────────────────────────
 const User = require('./models/User');
+const Vendor = require('./models/Vendor');
+const { ItemSchema, NescafeItem, LiptonItem, CanteenItem, FruitCornerItem, GenericItem, getItemModel } = require('./models/Item');
 
-const ItemSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  price: { type: Number, required: true },
-  category: { type: String, required: true },
-  imageUrl: { type: String, required: true },
-  isAvailable: { type: Boolean, default: true },
-  createdAt: { type: Date, default: Date.now },
-});
+// ─────────────────────────────────────────────
+// Default Admin Accounts & Auto-Seeding
+// ─────────────────────────────────────────────
+const DEFAULT_ADMINS = [
+  { email: 'admin.nescafe@hungerzone.com', pass: 'nescafe123', outlet: 'Nescafe', name: 'Nescafe Admin' },
+  { email: 'admin.lipton@hungerzone.com', pass: 'lipton123', outlet: 'Lipton', name: 'Lipton Admin' },
+  { email: 'admin.canteen@hungerzone.com', pass: 'canteen123', outlet: 'Canteen', name: 'Canteen Admin' },
+  { email: 'admin.fruit@hungerzone.com', pass: 'fruit123', outlet: 'Fruit Corner', name: 'Fruit Corner Admin' },
+];
+
+async function seedDefaultAdmins() {
+  try {
+    for (const def of DEFAULT_ADMINS) {
+      const existing = await User.findOne({
+        $or: [
+          { email: def.email.toLowerCase() },
+          { outletName: new RegExp(`^${def.outlet}$`, 'i'), role: 'admin' },
+        ],
+      });
+
+      if (!existing) {
+        const passwordHash = await bcrypt.hash(def.pass, 10);
+        const adminUser = new User({
+          name: def.name,
+          email: def.email.toLowerCase(),
+          password: passwordHash,
+          role: 'admin',
+          outletName: def.outlet,
+          emailVerified: true,
+        });
+        await adminUser.save();
+        console.log(`[AUTH] Seeded default admin account for: ${def.outlet} (${def.email})`);
+      }
+    }
+  } catch (err) {
+    console.warn('[AUTH] Warning during admin seeding:', err.message);
+  }
+}
+
+// ─────────────────────────────────────────────
+// Default Vendors & Multi-Vendor Auto-Seeding
+// ─────────────────────────────────────────────
+const DEFAULT_VENDORS = [
+  {
+    vendorId: 'canteen',
+    name: 'Main Canteen',
+    outletName: 'Canteen',
+    merchantId: process.env.MERCHANT_CODE || '5812',
+    upiId: 'BHARATPE.9J0E0Z0U0M847077@unitype',
+    receiverName: 'SIMON RAJKUMAR GROVER',
+    isActive: true,
+    isPaymentConfigured: true,
+  },
+  {
+    vendorId: 'nescafe',
+    name: 'Nescafé',
+    outletName: 'Nescafe',
+    merchantId: null,
+    upiId: null,
+    receiverName: null,
+    isActive: true,
+    isPaymentConfigured: false,
+  },
+  {
+    vendorId: 'lipton',
+    name: 'Lipton',
+    outletName: 'Lipton',
+    merchantId: null,
+    upiId: null,
+    receiverName: null,
+    isActive: true,
+    isPaymentConfigured: false,
+  },
+  {
+    vendorId: 'fruit_corner',
+    name: 'Fruit Corner',
+    outletName: 'Fruit Corner',
+    merchantId: null,
+    upiId: null,
+    receiverName: null,
+    isActive: true,
+    isPaymentConfigured: false,
+  },
+];
+
+async function seedDefaultVendors() {
+  try {
+    for (const def of DEFAULT_VENDORS) {
+      const existing = await Vendor.findOne({
+        $or: [
+          { vendorId: def.vendorId },
+          { outletName: new RegExp(`^${def.outletName}$`, 'i') },
+        ],
+      });
+
+      if (!existing) {
+        const vendor = new Vendor(def);
+        await vendor.save();
+        console.log(`[VENDOR] Seeded initial vendor: ${def.name} (${def.vendorId}) - Payment Configured: ${def.isPaymentConfigured}`);
+      }
+    }
+  } catch (err) {
+    console.warn('[VENDOR] Warning during vendor seeding:', err.message);
+  }
+}
 
 const OutletStatusSchema = new mongoose.Schema({
   outlet: { type: String, required: true, unique: true },
@@ -89,16 +190,15 @@ const OutletStatusSchema = new mongoose.Schema({
 });
 
 const OutletStatus = mongoose.model('OutletStatus', OutletStatusSchema);
-const NescafeItem = mongoose.model('NescafeItem', ItemSchema);
-const LiptonItem = mongoose.model('LiptonItem', ItemSchema);
-const CanteenItem = mongoose.model('CanteenItem', ItemSchema);
-const FruitCornerItem = mongoose.model('FruitCornerItem', ItemSchema);
-const GenericItem = mongoose.model('Item', ItemSchema);
 
 // ─────────────────────────────────────────────
 // Routes
 // ─────────────────────────────────────────────
 app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/api/vendors', require('./routes/vendorRoutes'));
+app.use('/api/payment', require('./routes/paymentRoutes'));
+app.use('/api/health', require('./routes/healthRoutes'));
+app.use('/health', require('./routes/healthRoutes'));
 app.use('/notifications', require('./routes/notificationRoutes'));
 
 // ─────────────────────────────────────────────
@@ -431,18 +531,109 @@ app.post('/daily-verify', async (req, res) => {
 });
 
 // ─────────────────────────────────────────────
+// POST /api/admin/change-credentials
+// Change admin email and/or password
+// ─────────────────────────────────────────────
+app.post('/api/admin/change-credentials', async (req, res) => {
+  try {
+    const { currentEmail, currentPassword, newEmail, newPassword } = req.body;
+
+    if (!currentEmail || !currentPassword) {
+      return res.status(400).json({ message: 'Current email and password are required' });
+    }
+
+    if (!newEmail && !newPassword) {
+      return res.status(400).json({ message: 'Please provide a new email or new password to update' });
+    }
+
+    const normCurrentEmail = currentEmail.toLowerCase().trim();
+    let user = await User.findOne({ email: normCurrentEmail });
+
+    // Fallback: check against DEFAULT_ADMINS if not yet persisted in DB
+    if (!user) {
+      const matchedDefault = DEFAULT_ADMINS.find(
+        (d) => d.email.toLowerCase() === normCurrentEmail && d.pass === currentPassword
+      );
+      if (matchedDefault) {
+        const passwordHash = await bcrypt.hash(matchedDefault.pass, 10);
+        user = new User({
+          name: matchedDefault.name,
+          email: matchedDefault.email.toLowerCase(),
+          password: passwordHash,
+          role: 'admin',
+          outletName: matchedDefault.outlet,
+          emailVerified: true,
+        });
+        await user.save();
+      } else {
+        return res.status(404).json({ message: 'Admin account not found with the provided current email' });
+      }
+    }
+
+    // Verify current password
+    let passwordMatch = false;
+    if (user.password.startsWith('$2')) {
+      passwordMatch = await bcrypt.compare(currentPassword, user.password);
+    } else {
+      passwordMatch = user.password === currentPassword;
+    }
+
+    if (!passwordMatch) {
+      return res.status(401).json({ message: 'Current password does not match' });
+    }
+
+    // Verify user role is admin
+    if (user.role !== 'admin' && !user.role?.startsWith('admin_')) {
+      return res.status(403).json({ message: 'Only admin accounts can change credentials via this portal' });
+    }
+
+    // Update email if provided and different
+    if (newEmail && newEmail.trim().toLowerCase() !== normCurrentEmail) {
+      const normNewEmail = newEmail.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normNewEmail)) {
+        return res.status(400).json({ message: 'Invalid new email format' });
+      }
+
+      const emailConflict = await User.findOne({
+        email: normNewEmail,
+        _id: { $ne: user._id },
+      });
+      if (emailConflict) {
+        return res.status(409).json({ message: 'The new email is already registered by another account' });
+      }
+      user.email = normNewEmail;
+    }
+
+    // Update password if provided
+    if (newPassword && newPassword.trim().length > 0) {
+      if (newPassword.trim().length < 6) {
+        return res.status(400).json({ message: 'New password must be at least 6 characters long' });
+      }
+      user.password = await bcrypt.hash(newPassword.trim(), 10);
+    }
+
+    await user.save();
+    console.log(`[AUTH] Admin credentials updated for ${user.outletName}: ${user.email}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Admin credentials updated successfully',
+      admin: {
+        email: user.email,
+        outletName: user.outletName,
+        role: user.role,
+        name: user.name,
+      },
+    });
+  } catch (err) {
+    console.error('[AUTH] change-credentials error:', err);
+    res.status(500).json({ message: 'Failed to update admin credentials', error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────
 // Item routes (unchanged)
 // ─────────────────────────────────────────────
-function getItemModel(category) {
-  switch (category.toLowerCase()) {
-    case 'nescafe': return NescafeItem;
-    case 'lipton': return LiptonItem;
-    case 'canteen': return CanteenItem;
-    case 'fruit':
-    case 'fruit corner': return FruitCornerItem;
-    default: return GenericItem;
-  }
-}
 
 app.post('/add-item', upload.single('image'), async (req, res) => {
   try {
