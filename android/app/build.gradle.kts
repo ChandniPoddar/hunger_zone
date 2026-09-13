@@ -11,11 +11,11 @@ repositories {
 }
 
 android {
-    namespace = "com.example.ggi_canteen"
+    namespace = "com.hungerzone.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.ggi_canteen"
+        applicationId = "com.hungerzone.app"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode

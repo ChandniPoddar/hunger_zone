@@ -1,4 +1,4 @@
-package com.example.ggi_canteen
+package com.hungerzone.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 
