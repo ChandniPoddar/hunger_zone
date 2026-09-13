@@ -48,7 +48,8 @@ router.put('/:vendorId', async (req, res) => {
   try {
     const { vendorId } = req.params;
     const cleanId = vendorId.toLowerCase().trim();
-    const { upiId, receiverName, merchantId, isActive, name } = req.body;
+    const { upiId, receiverName, merchantId, isActive, name, adminOutlet } = req.body;
+    const reqAdminOutlet = adminOutlet || req.headers['x-admin-outlet'];
 
     const vendor = await Vendor.findOne({
       $or: [
@@ -59,6 +60,26 @@ router.put('/:vendorId', async (req, res) => {
 
     if (!vendor) {
       return res.status(404).json({ message: 'Vendor not found' });
+    }
+
+    // Security Authorization Check: Verify caller belongs to this outlet
+    if (reqAdminOutlet) {
+      const cleanAdminOutlet = reqAdminOutlet.toString().toLowerCase().trim().replace(/[\s_-]+/g, '');
+      const cleanVendorOutlet = (vendor.outletName || vendor.vendorId).toLowerCase().trim().replace(/[\s_-]+/g, '');
+      const cleanVendorId = vendor.vendorId.toLowerCase().trim().replace(/[\s_-]+/g, '');
+
+      const isAuthorized = cleanAdminOutlet === cleanVendorOutlet || 
+                           cleanAdminOutlet === cleanVendorId ||
+                           cleanAdminOutlet.includes(cleanVendorId) ||
+                           cleanVendorId.includes(cleanAdminOutlet);
+
+      if (!isAuthorized) {
+        console.warn(`[SECURITY] Forbidden: Admin of '${reqAdminOutlet}' attempted to modify credentials of '${vendor.name}' (${vendor.vendorId})`);
+        return res.status(403).json({
+          success: false,
+          message: 'Forbidden: You are strictly authorized to configure payment settings for your own outlet only.',
+        });
+      }
     }
 
     if (name !== undefined) vendor.name = name.trim();

@@ -7,7 +7,12 @@ import 'package:hunger_zone/utils/constants.dart';
 
 class VendorPaymentSettingsScreen extends StatefulWidget {
   final String? initialVendorId;
-  const VendorPaymentSettingsScreen({super.key, this.initialVendorId});
+  final bool lockToOutlet;
+  const VendorPaymentSettingsScreen({
+    super.key,
+    this.initialVendorId,
+    this.lockToOutlet = true,
+  });
 
   @override
   State<VendorPaymentSettingsScreen> createState() => _VendorPaymentSettingsScreenState();
@@ -34,11 +39,35 @@ class _VendorPaymentSettingsScreenState extends State<VendorPaymentSettingsScree
   static const Color emeraldGreen = Color(0xFF10B981);
   static const Color warningOrange = Color(0xFFF59E0B);
 
+  String _normalizeVendorId(String raw) {
+    final clean = raw.trim().toLowerCase();
+    if (clean == 'canteen') return 'canteen';
+    if (clean == 'nescafe') return 'nescafe';
+    if (clean == 'lipton') return 'lipton';
+    if (clean == 'fruit_corner' || clean == 'fruit corner' || clean == 'fruit') return 'fruit_corner';
+    return clean.replaceAll(' ', '_');
+  }
+
+  String _defaultVendorName(String id) {
+    switch (id) {
+      case 'canteen':
+        return 'Main Canteen';
+      case 'nescafe':
+        return 'Nescafé';
+      case 'lipton':
+        return 'Lipton';
+      case 'fruit_corner':
+        return 'Fruit Corner';
+      default:
+        return 'Outlet';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     if (widget.initialVendorId != null && widget.initialVendorId!.isNotEmpty) {
-      _selectedVendorId = widget.initialVendorId!.toLowerCase().replaceAll(' ', '_');
+      _selectedVendorId = _normalizeVendorId(widget.initialVendorId!);
     }
     _fetchVendors();
   }
@@ -54,28 +83,46 @@ class _VendorPaymentSettingsScreenState extends State<VendorPaymentSettingsScree
   Future<void> _fetchVendors() async {
     setState(() => _isLoading = true);
     try {
-      final response = await http.get(
-        Uri.parse("${AppConstants.baseUrl}/api/vendors"),
-      );
+      if (widget.lockToOutlet) {
+        // Strict Security Isolation: Fetch solely the assigned outlet's settings
+        final response = await http.get(
+          Uri.parse("${AppConstants.baseUrl}/api/vendors/$_selectedVendorId"),
+        );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is List && data.isNotEmpty) {
-          setState(() {
-            _vendors = data;
-            // Verify selected vendor exists
-            final exists = _vendors.any((v) => v['vendorId'] == _selectedVendorId);
-            if (!exists) {
-              _selectedVendorId = _vendors.first['vendorId'] ?? 'canteen';
-            }
-            _loadVendorIntoForm(_selectedVendorId);
-            _isLoading = false;
-          });
-          return;
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data is Map<String, dynamic>) {
+            setState(() {
+              _vendors = [data];
+              _loadVendorIntoForm(_selectedVendorId);
+              _isLoading = false;
+            });
+            return;
+          }
+        }
+      } else {
+        final response = await http.get(
+          Uri.parse("${AppConstants.baseUrl}/api/vendors"),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          if (data is List && data.isNotEmpty) {
+            setState(() {
+              _vendors = data;
+              final exists = _vendors.any((v) => v['vendorId'] == _selectedVendorId);
+              if (!exists) {
+                _selectedVendorId = _vendors.first['vendorId'] ?? 'canteen';
+              }
+              _loadVendorIntoForm(_selectedVendorId);
+              _isLoading = false;
+            });
+            return;
+          }
         }
       }
     } catch (e) {
-      debugPrint("Error fetching vendors: $e");
+      debugPrint("Error fetching vendor(s): $e");
     }
 
     if (mounted) {
@@ -132,12 +179,16 @@ class _VendorPaymentSettingsScreenState extends State<VendorPaymentSettingsScree
     try {
       final response = await http.put(
         Uri.parse("${AppConstants.baseUrl}/api/vendors/$_selectedVendorId"),
-        headers: {"Content-Type": "application/json"},
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-outlet": _selectedVendorId,
+        },
         body: jsonEncode({
           "upiId": upi,
           "receiverName": receiver,
           "merchantId": merchant.isNotEmpty ? merchant : '5812',
           "isActive": _isActive,
+          "adminOutlet": _selectedVendorId,
         }),
       );
 
@@ -252,6 +303,7 @@ class _VendorPaymentSettingsScreenState extends State<VendorPaymentSettingsScree
   Widget build(BuildContext context) {
     final current = _currentVendor;
     final bool isConfigured = current != null && current['isPaymentConfigured'] == true;
+    final String outletDisplayName = current?['name'] ?? _defaultVendorName(_selectedVendorId);
 
     return Scaffold(
       backgroundColor: neutralBg,
@@ -266,11 +318,11 @@ class _VendorPaymentSettingsScreenState extends State<VendorPaymentSettingsScree
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Vendor Payment Setup",
-              style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              widget.lockToOutlet ? "$outletDisplayName Payment Setup" : "Vendor Payment Setup",
+              style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             Text(
-              "Multi-Vendor UPI Configuration",
+              widget.lockToOutlet ? "Authorized Admin Configuration" : "Multi-Vendor UPI Configuration",
               style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70),
             ),
           ],
@@ -278,7 +330,7 @@ class _VendorPaymentSettingsScreenState extends State<VendorPaymentSettingsScree
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-            tooltip: "Refresh Vendors",
+            tooltip: "Refresh Credentials",
             onPressed: _fetchVendors,
           ),
         ],
@@ -292,7 +344,10 @@ class _VendorPaymentSettingsScreenState extends State<VendorPaymentSettingsScree
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildVendorSelector(),
+                    if (widget.lockToOutlet)
+                      _buildAuthorizedOutletHeader(current, outletDisplayName)
+                    else
+                      _buildVendorSelector(),
                     const SizedBox(height: 20),
                     _buildStatusBanner(isConfigured, current),
                     const SizedBox(height: 24),
@@ -306,6 +361,131 @@ class _VendorPaymentSettingsScreenState extends State<VendorPaymentSettingsScree
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildAuthorizedOutletHeader(Map<String, dynamic>? vendor, String outletDisplayName) {
+    final bool isConfigured = vendor != null && vendor['isPaymentConfigured'] == true;
+    final bool isActive = vendor?['isActive'] ?? true;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: darkNavy,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: darkNavy.withValues(alpha: 0.18),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.lock_rounded, color: Colors.white70, size: 13),
+                    const SizedBox(width: 6),
+                    Text(
+                      "AUTHORIZED OUTLET",
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: (isConfigured && isActive)
+                      ? emeraldGreen.withValues(alpha: 0.2)
+                      : warningOrange.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: (isConfigured && isActive) ? emeraldGreen : warningOrange,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: (isConfigured && isActive) ? emeraldGreen : warningOrange,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      (isConfigured && isActive) ? "UPI Active" : "COD Only",
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: (isConfigured && isActive) ? emeraldGreen : warningOrange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: primaryCoral.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.storefront_rounded, color: primaryCoral, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      outletDisplayName,
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    Text(
+                      "Dedicated Payment & UPI Gateway",
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: Colors.white60,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

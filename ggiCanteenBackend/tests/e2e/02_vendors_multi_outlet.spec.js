@@ -85,4 +85,22 @@ test.describe('E2E Suite 2: Multi-Vendor Engine & Configuration', () => {
 
     console.log('[PASS] Vendor payment credential update and auto-calculation verified with clean rollback.');
   });
+
+  test('PUT /api/vendors/:vendorId - Security: Rejects cross-outlet credential modification with HTTP 403', async ({ request }) => {
+    // Admin of Nescafe attempts to modify Canteen credentials
+    const unauthorizedRes = await request.put('/api/vendors/canteen', {
+      data: {
+        upiId: 'hacker@upi',
+        receiverName: 'Hacker',
+        adminOutlet: 'nescafe',
+      },
+    });
+
+    expect(unauthorizedRes.status()).toBe(403);
+    const body = await unauthorizedRes.json();
+    expect(body.success).toBe(false);
+    expect(body.message).toContain('strictly authorized to configure payment settings for your own outlet only');
+
+    console.log('[PASS] Security rule validated: Cross-outlet admin payment modification strictly blocked with HTTP 403.');
+  });
 });
